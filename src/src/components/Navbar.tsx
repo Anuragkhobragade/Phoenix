@@ -1,6 +1,8 @@
 import React from 'react';
 import { Page, UserProfile } from '../types';
 import { HeartPulse, CalendarDays, Menu, X, LogOut, User } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import LanguageSelector from './LanguageSelector';
 
 interface NavbarProps {
     currentPage: Page;
@@ -20,22 +22,27 @@ export default function Navbar({
     onSignOut
 }: NavbarProps) {
     const [isOpen, setIsOpen] = React.useState(false);
+    const { t } = useLanguage();
 
     const isAdmin = user?.email === 'anuragkhobragade@gmail.com';
 
     const navItems: Array<{ id: Page; label: string }> = [
-        { id: 'home', label: 'Home' },
-        { id: 'about', label: 'About Us' },
-        { id: 'departments', label: 'Departments' },
-        { id: 'doctors', label: 'Our Doctors' }
+        { id: 'home', label: t('nav.home') },
+        { id: 'about', label: t('nav.about') },
+        { id: 'departments', label: t('nav.departments') },
+        { id: 'doctors', label: t('nav.doctors') }
     ];
 
     if (userProfile?.role === 'doctor') {
-        navItems.push({ id: 'doctor-portal', label: 'Doctor Portal' });
+        navItems.push({ id: 'doctor-portal', label: t('nav.doctorPortal') });
+    } else if (userProfile?.role === 'driver') {
+        navItems.push({ id: 'driver-portal', label: 'Driver Portal 🚑' });
+    } else if (userProfile?.role === 'phc_staff') {
+        navItems.push({ id: 'phc-portal', label: 'PHC Portal 🏥' });
     } else if (userProfile?.role === 'admin' || user?.email === 'anuragkhobragade@gmail.com') {
-        navItems.push({ id: 'admin', label: 'Admin Portal' });
+        navItems.push({ id: 'admin', label: t('nav.adminPortal') });
     } else {
-        navItems.push({ id: 'my-appointments', label: 'My Bookings' });
+        navItems.push({ id: 'my-appointments', label: t('nav.myBookings') });
     }
 
     const handleNavClick = (pageId: Page) => {
@@ -60,10 +67,10 @@ export default function Navbar({
                             </div>
                             <div className="text-left">
                                 <span className="text-xl font-bold font-sans tracking-tight text-slate-900 block leading-tight">
-                                    Sanjeevani
+                                    {t('nav.brand')}
                                 </span>
                                 <span className="text-[11px] font-medium text-teal-605 tracking-wider uppercase block font-mono">
-                                    Medical Center
+                                    {t('nav.subBrand')}
                                 </span>
                             </div>
                         </button>
@@ -97,8 +104,10 @@ export default function Navbar({
                         })}
                     </div>
 
-                    {/* Desktop Call To Action with Client Profile Status */}
+                    {/* Desktop Call To Action with Client Profile Status & Language Selector */}
                     <div className="hidden md:flex items-center space-x-3">
+                        <LanguageSelector />
+
                         {user ? (
                             <div className="flex items-center space-x-3 bg-slate-50 border border-slate-100 rounded-xl px-4 py-1.5" id="navbar-user-profile-badge">
                                 <div className="w-8 h-8 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-sm uppercase shrink-0 font-sans">
@@ -112,7 +121,7 @@ export default function Navbar({
                                         onClick={onSignOut}
                                         className="text-[10px] font-bold text-rose-600 hover:text-rose-700 block transition-colors leading-none mt-1 cursor-pointer"
                                     >
-                                        Sign Out
+                                        {t('nav.signOut')}
                                     </button>
                                 </div>
                             </div>
@@ -122,7 +131,7 @@ export default function Navbar({
                                 className="inline-flex items-center space-x-1 text-slate-600 hover:text-slate-900 font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
                                 id="nav-signin-btn"
                             >
-                                <span>Sign In</span>
+                                <span>{t('nav.signIn')}</span>
                             </button>
                         )}
 
@@ -144,12 +153,13 @@ export default function Navbar({
                             id="nav-book-appointment-btn"
                         >
                             <CalendarDays className="h-4 w-4 text-emerald-405 group-hover:scale-110 transition-transform" />
-                            <span>Book Appointment</span>
+                            <span>{t('nav.bookAppointment')}</span>
                         </button>
                     </div>
 
-                    {/* Mobile menu button */}
-                    <div className="flex items-center md:hidden">
+                    {/* Mobile menu button and language selector */}
+                    <div className="flex items-center space-x-2 md:hidden">
+                        <LanguageSelector />
                         <button
                             onClick={() => setIsOpen(!isOpen)}
                             className="inline-flex items-center justify-center p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
@@ -160,6 +170,7 @@ export default function Navbar({
                             {isOpen ? <X className="block h-6 w-6" /> : <Menu className="block h-6 w-6" />}
                         </button>
                     </div>
+
                 </div>
             </div>
 

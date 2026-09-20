@@ -1,11 +1,13 @@
 import { HeartPulse, Phone, Mail, MapPin, Clock } from 'lucide-react';
 import { Page } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 
 interface FooterProps {
     setCurrentPage: (page: Page) => void;
 }
 
 export default function Footer({ setCurrentPage }: FooterProps) {
+    const { t } = useLanguage();
     const handleLinkClick = (page: Page) => {
         setCurrentPage(page);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -23,15 +25,15 @@ export default function Footer({ setCurrentPage }: FooterProps) {
                                 <HeartPulse className="h-5 w-5" />
                             </div>
                             <span className="text-xl font-bold font-sans tracking-tight text-white leading-none">
-                                Sanjeevani Medical
+                                {t('nav.brand')} {t('nav.subBrand')}
                             </span>
                         </div>
                         <p className="text-sm text-slate-400 leading-relaxed pt-2">
-                            Our clinic strives to maintain clinical research standards, medical care excellence, and compassionate personal consultations for you and your family.
+                            {t('footer.about')}
                         </p>
                         <div className="flex items-center space-x-2 text-xs text-slate-400 font-mono bg-slate-950 p-3 rounded-lg border border-slate-800/80">
                             <Clock className="h-4 w-4 text-emerald-450 shrink-0" />
-                            <span>Emergency Services Available 24/7</span>
+                            <span>{t('hero.badge')}</span>
                         </div>
                     </div>
 

@@ -17,6 +17,9 @@ import DoctorPortal from './components/DoctorPortal';
 import VideoCallRoom from './components/VideoCallRoom';
 import AdminPortal from './components/AdminPortal';
 import Emergency from './components/Emergency';
+import DriverPortal from './components/DriverPortal';
+import PhcPortal from './components/PhcPortal';
+import AIChatbot from './components/AIChatbot';
 import { handleFirestoreError, OperationType } from './lib/firestoreErrorHandler';
 
 export default function App() {
@@ -101,6 +104,10 @@ export default function App() {
                 setCurrentPage('doctor-portal');
             } else if (userProfile.role === 'admin' && (currentPage === 'home' || currentPage === 'auth')) {
                 setCurrentPage('admin');
+            } else if (userProfile.role === 'driver' && (currentPage === 'home' || currentPage === 'auth')) {
+                setCurrentPage('driver-portal');
+            } else if (userProfile.role === 'phc_staff' && (currentPage === 'home' || currentPage === 'auth')) {
+                setCurrentPage('phc-portal');
             }
         }
     }, [userProfile]);
@@ -306,11 +313,28 @@ export default function App() {
                             />
                         )}
 
+                        {/* Secured Driver Portal Route */}
+                        {currentPage === 'driver-portal' && (
+                            <DriverPortal
+                                setCurrentPage={setCurrentPage}
+                                userProfile={userProfile}
+                                onSignOut={handleSignOut}
+                            />
+                        )}
+
                         {/* Secured Admin Portal Route */}
                         {currentPage === 'admin' && (
                             <AdminPortal
                                 setCurrentPage={setCurrentPage}
                                 user={user}
+                            />
+                        )}
+
+                        {/* Secured PHC Portal Route */}
+                        {currentPage === 'phc-portal' && userProfile && (
+                            <PhcPortal
+                                userProfile={userProfile}
+                                onLogout={handleSignOut}
                             />
                         )}
 
@@ -324,6 +348,20 @@ export default function App() {
 
             {/* Persistent Footer */}
             <Footer setCurrentPage={setCurrentPage} />
+
+            {/* AI Medical Chatbot & Report Analyzer */}
+            <AIChatbot
+                onSelectDoctorAndBook={(deptId, docId) => {
+                    setSelectedDepartmentId(deptId);
+                    setSelectedDoctorId(docId);
+                    setCurrentPage('booking');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                onBookAmbulance={() => {
+                    setCurrentPage('emergency');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+            />
 
             {/* Video Call Overlay */}
             {activeVideoCall && userProfile && (

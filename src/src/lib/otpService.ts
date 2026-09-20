@@ -9,9 +9,10 @@ export class OTPError extends Error {
 const tempOtpStore: { [email: string]: { code: string; expiresAt: number } } = {};
 
 export const sendOTP = async (email: string): Promise<void> => {
-    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || '';
-    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || '';
-    const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '';
+    const env = (import.meta as any).env || {};
+    const serviceId = env.VITE_EMAILJS_SERVICE_ID || '';
+    const templateId = env.VITE_EMAILJS_TEMPLATE_ID || '';
+    const publicKey = env.VITE_EMAILJS_PUBLIC_KEY || '';
 
     // Generate a 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString();

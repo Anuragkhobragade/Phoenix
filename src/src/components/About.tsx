@@ -1,4 +1,5 @@
 import { motion } from 'motion/react';
+import { useLanguage } from '../context/LanguageContext';
 import {
     Heart,
     ShieldCheck,
@@ -10,57 +11,32 @@ import {
     TrendingUp
 } from 'lucide-react';
 
-const VALUES = [
-    {
-        icon: Heart,
-        title: 'Patient Empathy',
-        desc: 'We put the physical comfort and mental peace of our patients at the center of every clinical decision and daily therapeutic care.'
-    },
-    {
-        icon: ShieldCheck,
-        title: 'Absolute Integrity',
-        desc: 'Maintaining transparent billing, ethical medical research guidelines, and honest, detailed patient communication.'
-    },
-    {
-        icon: Flame,
-        title: 'Innovative Excellence',
-        desc: 'Investing continuously in the highest level of research, surgical systems, and doctor specializations for better recoveries.'
-    },
-    {
-        icon: Users,
-        title: 'Interdisciplinary Collaboration',
-        desc: 'Cardiologists, pediatricians, neurologists, and physiotherapists working as a single team to diagnose complex cases.'
-    }
-];
-
-const TIMELINE = [
-    {
-        year: '2008',
-        title: 'The Humble Inception',
-        desc: 'Sanjeevani began as a small, specialized local cardiology consulting office with only 2 clinics and 1 diagnostic room, founded by Dr. Elena Rostova.',
-        icon: CalendarClock
-    },
-    {
-        year: '2014',
-        title: 'New Pediatric Wing',
-        desc: 'Recognizing regional needs, we created a pediatric care facility with state-of-the-art children allergy clinics and primary wellness programs.',
-        icon: Award
-    },
-    {
-        year: '25th Anniversary / 2020',
-        title: 'Multi-Department Medical Center',
-        desc: 'Moved to our current custom-built, multi-level wellness clinic complex. Added neurology, orthopedics, and integrated full digital lab services.',
-        icon: Globe
-    },
-    {
-        year: 'Present / 2026',
-        title: 'Next-Gen Interactive Care',
-        desc: 'With over 12,000 successful surgical therapies and patient satisfaction rated at 99.4%, we continue leading regional health care and diagnostics.',
-        icon: TrendingUp
-    }
-];
-
 export default function About() {
+    const { t } = useLanguage();
+
+    const valuesList = [
+        {
+            icon: Heart,
+            title: t('about.val.v1.t'),
+            desc: t('about.val.v1.d')
+        },
+        {
+            icon: ShieldCheck,
+            title: t('about.val.v2.t'),
+            desc: t('about.val.v2.d')
+        },
+        {
+            icon: Flame,
+            title: t('about.val.v3.t'),
+            desc: t('about.val.v3.d')
+        },
+        {
+            icon: Users,
+            title: t('about.val.v4.t'),
+            desc: t('about.val.v4.d')
+        }
+    ];
+
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
@@ -81,13 +57,13 @@ export default function About() {
                 {/* 1. TITLE HEADER */}
                 <div className="text-center max-w-3xl mx-auto mb-16">
                     <span className="text-xs font-semibold text-teal-650 uppercase tracking-widest font-mono">
-                        Our Medical Heritage
+                        {t('about.sub')}
                     </span>
                     <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold font-sans text-slate-900 mt-2">
-                        Providing Empathetic & Innovative Medical Care
+                        {t('about.title')}
                     </h1>
                     <p className="text-slate-500 text-sm sm:text-base mt-3 leading-relaxed">
-                        Founded with the belief that healthcare should balance sophisticated scientific research with human empathy, Sanjeevani is committed to excellence in service and clinical research.
+                        {t('about.desc')}
                     </p>
                 </div>
 
@@ -103,38 +79,17 @@ export default function About() {
                         />
                         <div className="absolute -bottom-6 -right-6 bg-teal-650 text-white p-6 rounded-xl hidden sm:flex flex-col text-left max-w-[240px]">
                             <span className="text-3xl font-bold font-sans">15+</span>
-                            <span className="text-xs text-teal-100 font-mono mt-1">YEARS OF MEDICAL RECOGNITION AND CLINICAL EXCELLENCE</span>
+                            <span className="text-xs text-teal-100 font-mono mt-1">{t('hero.stat2.lbl')}</span>
                         </div>
                     </div>
 
                     <div className="text-left space-y-5">
                         <h2 className="text-2xl font-bold text-slate-900 font-sans tracking-tight">
-                            An Elevated Approach to Modern Family Healthcare
+                            {t('about.story.title')}
                         </h2>
                         <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-                            At Sanjeevani Medical Center, we recognize that going to the clinic should be accompanied by absolute therapeutic reassurance. We combine multidisciplinary expert doctors with continuous system checkups to prevent diagnoses mistakes and accelerate your road to health.
+                            {t('about.story.desc')}
                         </p>
-                        <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-                            We continue building diagnostic labs, physical rehabilitation clinics, and pediatric safe zones to make your appointments quick, detailed, and reassuring. Our custom digital scheduling assistant helps keep wait time under 10 minutes from check-in.
-                        </p>
-
-                        {/* Sub stats columns */}
-                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
-                            <div className="flex items-start space-x-2.5">
-                                <span className="h-2 w-2 rounded-full bg-teal-600 mt-2 shrink-0 animate-ping" />
-                                <div>
-                                    <h4 className="font-bold text-slate-950 text-sm">Empathetic Care</h4>
-                                    <p className="text-slate-500 text-xs">Patients treated as physical & emotional family.</p>
-                                </div>
-                            </div>
-                            <div className="flex items-start space-x-2.5">
-                                <span className="h-2 w-2 rounded-full bg-teal-600 mt-2 shrink-0" />
-                                <div>
-                                    <h4 className="font-bold text-slate-950 text-sm font-sans">Top Research Labs</h4>
-                                    <p className="text-slate-500 text-xs">Integrated diagnostics mapping systems.</p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </section>
 
@@ -142,24 +97,24 @@ export default function About() {
                 <section className="mb-20" id="about-values">
                     <div className="text-center max-w-2xl mx-auto mb-10">
                         <span className="text-xs font-semibold text-teal-650 uppercase tracking-widest font-mono">
-                            Our Compass
+                            {t('about.sub')}
                         </span>
                         <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-sans mt-1">
-                            The Principles Directing Sanjeevani Healthcare
+                            {t('about.val.title')}
                         </h2>
                     </div>
 
                     <motion.div
-                        className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left"
+                        className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left"
                         variants={containerVariants}
                         initial="hidden"
                         whileInView="visible"
-                        viewport={{ once: true }}
+                        viewport={{ once: true, margin: "-100px" }}
                     >
-                        {VALUES.map((val, idx) => (
+                        {valuesList.map((val, idx) => (
                             <motion.div
                                 key={idx}
-                                className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex space-x-4 hover:shadow transition-shadow"
+                                className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-start space-x-4"
                                 variants={itemVariants}
                             >
                                 <div className="bg-teal-50 text-teal-700 p-3 rounded-lg shrink-0 h-fit">
@@ -178,18 +133,23 @@ export default function About() {
                 <section className="bg-white rounded-3xl p-8 sm:p-12 border border-slate-100 shadow-sm" id="about-history-timeline">
                     <div className="text-center max-w-2xl mx-auto mb-12">
                         <span className="text-xs font-semibold text-teal-650 uppercase tracking-widest font-mono">
-                            Our Journey
+                            {t('about.journey.sub')}
                         </span>
                         <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-sans mt-1">
-                            Historical Milestones & Strategic Growth
+                            {t('about.journey.title')}
                         </h2>
                         <p className="text-slate-500 text-xs sm:text-sm mt-1">
-                            Review our growth from a cardiology clinic to a comprehensive multi-department facility.
+                            {t('about.journey.desc')}
                         </p>
                     </div>
 
                     <div className="relative border-l border-slate-205 ml-4 sm:ml-8 md:mx-auto max-w-3xl space-y-12">
-                        {TIMELINE.map((item, idx) => (
+                        {[
+                            { year: '2008', title: t('about.t1.title'), desc: t('about.t1.desc'), icon: CalendarClock },
+                            { year: '2014', title: t('about.t2.title'), desc: t('about.t2.desc'), icon: Award },
+                            { year: '2020', title: t('about.t3.title'), desc: t('about.t3.desc'), icon: Globe },
+                            { year: '2026', title: t('about.t4.title'), desc: t('about.t4.desc'), icon: TrendingUp }
+                        ].map((item, idx) => (
                             <div key={idx} className="relative pl-8 md:pl-12 text-left">
                                 {/* Timeline badge or dot */}
                                 <div className="absolute -left-[17px] top-1.5 bg-teal-600 text-white rounded-full p-1.5 border border-white shrink-0 shadow-md">

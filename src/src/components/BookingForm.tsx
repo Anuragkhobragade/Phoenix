@@ -1,6 +1,7 @@
 import React from 'react';
 import { Department, Doctor, Appointment, Page } from '../types';
 import { DEPARTMENTS, DOCTORS } from '../data';
+import { useLanguage } from '../context/LanguageContext';
 import { doc, setDoc } from 'firebase/firestore';
 import { db, storage } from '../firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
@@ -54,6 +55,7 @@ export default function BookingForm({
     editingAppointment,
     setEditingAppointment
 }: BookingFormProps) {
+    const { t } = useLanguage();
 
     // Multi-step phase state: 1, 2, 3, 4, 5 (Success)
     const [step, setStep] = React.useState<number>(1);
@@ -463,10 +465,10 @@ export default function BookingForm({
 
                             {/* Steppers */}
                             {[
-                                { icon: Stethoscope, label: 'Department' },
-                                { icon: UserRound, label: 'Doctor' },
-                                { icon: CalendarClock, label: 'Schedule' },
-                                { icon: Contact, label: 'Patient Info' }
+                                { icon: Stethoscope, label: t('book.step1') },
+                                { icon: UserRound, label: t('book.step2') },
+                                { icon: CalendarClock, label: t('book.step3') },
+                                { icon: Contact, label: t('book.step4') }
                             ].map((st, idx) => {
                                 const sNumber = idx + 1;
                                 const isActive = step === sNumber;
@@ -746,6 +748,7 @@ export default function BookingForm({
                                         {/* Error block */}
                                         {dateError && (
                                             <div className="bg-rose-50 text-rose-700 p-3 rounded-xl border border-rose-100 text-xs sm:text-sm flex items-start space-x-2">
+
                                                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                                                 <span>{dateError}</span>
                                             </div>

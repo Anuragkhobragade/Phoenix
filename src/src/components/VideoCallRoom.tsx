@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { doc, onSnapshot, setDoc, updateDoc, getDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, updateDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Appointment, UserProfile } from '../types';
 import { Video, VideoOff, Mic, MicOff, PhoneOff, Monitor, Copy, Check, Users } from 'lucide-react';
@@ -10,13 +10,15 @@ interface VideoCallRoomProps {
     onLeave: () => void;
 }
 
-const servers = {
+const servers: RTCConfiguration = {
     iceServers: [
         {
             urls: [
                 'stun:stun.l.google.com:19302',
                 'stun:stun1.l.google.com:19302',
                 'stun:stun2.l.google.com:19302',
+                'stun:stun3.l.google.com:19302',
+                'stun:stun4.l.google.com:19302',
             ],
         },
         {
@@ -35,7 +37,7 @@ const servers = {
 export default function VideoCallRoom({ appointment, userProfile, onLeave }: VideoCallRoomProps) {
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-    
+
     const localVideoRef = useRef<HTMLVideoElement>(null);
     const remoteVideoRef = useRef<HTMLVideoElement>(null);
     const pc = useRef<RTCPeerConnection | null>(null);
@@ -57,6 +59,22 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
         setTimeout(() => setCopied(false), 2000);
     };
 
+    // Keep local video element synced with localStream across re-renders
+    useEffect(() => {
+        if (localVideoRef.current && localStream) {
+            localVideoRef.current.srcObject = localStream;
+            localVideoRef.current.play().catch(e => console.warn("Local stream playback error:", e));
+        }
+    }, [localStream]);
+
+    // 1. Auto-bind stream using useEffect
+    useEffect(() => {
+        if (remoteVideoRef.current && remoteStream) {
+            remoteVideoRef.current.srcObject = remoteStream;
+            remoteVideoRef.current.play().catch((e) => console.warn("Autoplay block:", e));
+        }
+    }, [remoteStream]);
+
     useEffect(() => {
         let isMounted = true;
         let localMediaStream: MediaStream | null = null;
@@ -66,10 +84,10 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
 
         async function setupCall() {
             try {
-                // 1. Get Camera and Microphone access (with fallbacks for blocked/missing hardware)
+                // Get Camera and Microphone access with fallbacks
                 try {
                     localMediaStream = await navigator.mediaDevices.getUserMedia({
-                        video: true,
+                        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
                         audio: true
                     });
                 } catch (err) {
@@ -81,7 +99,7 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
                         });
                         setIsVideoOff(true);
                     } catch (audioErr) {
-                        console.warn("Failed to get audio-only stream, trying video-only:", audioErr);
+                        console.warn("Failed to get audio-only stream, trying video-only fallback:", audioErr);
                         try {
                             localMediaStream = await navigator.mediaDevices.getUserMedia({
                                 video: true,
@@ -90,7 +108,7 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
                             setIsMuted(true);
                         } catch (videoErr) {
                             console.error("All media device combinations failed:", videoErr);
-                            throw new Error("Could not access camera or microphone. Please enable permissions in site settings.");
+                            throw new Error("Could not access camera or microphone. Please check site permissions.");
                         }
                     }
                 }
@@ -105,7 +123,7 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
                     localVideoRef.current.srcObject = localMediaStream;
                 }
 
-                // 2. Setup RTCPeerConnection
+                // Setup RTCPeerConnection
                 peerConnection = new RTCPeerConnection(servers);
                 pc.current = peerConnection;
 
@@ -114,30 +132,44 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
                     peerConnection!.addTrack(track, localMediaStream!);
                 });
 
-                // Receive remote tracks
+                // 2. Handle incoming remote tracks (Do not hide video screen on initial track.muted)
                 peerConnection.ontrack = (event) => {
-                    const incomingStream = event.streams[0];
+                    console.log('Remote track received:', event.track.kind, event.streams);
+                    let incomingStream = event.streams[0];
+                    if (!incomingStream) {
+                        incomingStream = new MediaStream([event.track]);
+                    }
+                    
                     setRemoteStream(incomingStream);
-                    if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== incomingStream) {
+                    setCallStatus('Connected');
+
+                    if (remoteVideoRef.current) {
                         remoteVideoRef.current.srcObject = incomingStream;
-                        remoteVideoRef.current.play().catch(e => console.warn('Failed to auto-play remote video stream:', e));
+                        remoteVideoRef.current.play().catch(e => console.warn('Remote video playback warning:', e));
                     }
 
-                    incomingStream.getTracks().forEach(track => {
-                        // Monitor remote video track state
-                        if (track.kind === 'video') {
-                            setIsRemoteVideoActive(track.enabled && !track.muted);
-                            track.onmute = () => setIsRemoteVideoActive(false);
-                            track.onunmute = () => setIsRemoteVideoActive(true);
-                        }
-                    });
-                    setCallStatus('Connected');
+                    if (event.track.kind === 'video') {
+                        setIsRemoteVideoActive(true);
+
+                        event.track.onunmute = () => {
+                            if (isMounted) setIsRemoteVideoActive(true);
+                        };
+                        event.track.onmute = () => {
+                            if (isMounted && !event.track.enabled) {
+                                setIsRemoteVideoActive(false);
+                            }
+                        };
+                        event.track.onended = () => {
+                            if (isMounted) setIsRemoteVideoActive(false);
+                        };
+                    }
                 };
 
-                // Track peer connection states
+                // Connection state management
                 peerConnection.onconnectionstatechange = () => {
                     if (!isMounted) return;
                     const state = peerConnection!.connectionState;
+                    console.log('PeerConnection state changed:', state);
                     if (state === 'connected') {
                         setCallStatus('Connected');
                     } else if (state === 'disconnected') {
@@ -147,192 +179,138 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
                     }
                 };
 
-                // 3. Signaling: Determine Role
-                const roomSnap = await getDoc(roomRef);
-                const roomExists = roomSnap.exists();
+                // Candidate Queueing & Deduplication Setup
+                const addedCandidates = new Set<string>();
+                const candidateQueue: RTCIceCandidateInit[] = [];
 
-                if (!roomExists) {
-                    // Start as Caller
-                    setCallStatus('Waiting for other participant to join...');
-                    
+                const processOrQueueCandidates = async (candidates: RTCIceCandidateInit[]) => {
+                    for (const cand of candidates) {
+                        const key = JSON.stringify(cand);
+                        if (addedCandidates.has(key)) continue;
+
+                        if (peerConnection && peerConnection.currentRemoteDescription) {
+                            addedCandidates.add(key);
+                            try {
+                                await peerConnection.addIceCandidate(new RTCIceCandidate(cand));
+                            } catch (err) {
+                                console.warn('Error adding remote ICE candidate:', err);
+                            }
+                        } else {
+                            candidateQueue.push(cand);
+                        }
+                    }
+                };
+
+                const drainCandidateQueue = async () => {
+                    if (!peerConnection || !peerConnection.currentRemoteDescription) return;
+                    while (candidateQueue.length > 0) {
+                        const cand = candidateQueue.shift();
+                        if (cand) {
+                            const key = JSON.stringify(cand);
+                            if (!addedCandidates.has(key)) {
+                                addedCandidates.add(key);
+                                try {
+                                    await peerConnection.addIceCandidate(new RTCIceCandidate(cand));
+                                } catch (err) {
+                                    console.warn('Error adding queued ICE candidate:', err);
+                                }
+                            }
+                        }
+                    }
+                };
+
+                // ROLE-BASED SIGNALING FLOW
+                if (isDoctor) {
+                    // DOCTOR HANDSHAKE (CALLER)
+                    setCallStatus('Starting room, waiting for patient...');
+
+                    await deleteDoc(roomRef).catch(() => { });
+
+                    const offerDescription = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offerDescription);
+
                     await setDoc(roomRef, {
                         createdAt: new Date().toISOString(),
-                        status: 'active',
-                        callerName: userProfile.name || 'User',
-                        callerRole: userProfile.role || 'patient',
+                        offer: { sdp: offerDescription.sdp, type: offerDescription.type },
+                        callerName: userProfile.name || 'Doctor',
                         callerCandidates: [],
                         calleeCandidates: []
                     });
 
-                    // Add caller candidates (debounced to avoid Firestore write rate limiting)
-                    let callerCandBatch: any[] = [];
-                    let callerCandTimeout: any = null;
+                    updateDoc(doc(db, 'appointments', appointment.id), { videoCallStatus: 'ready' }).catch(() => { });
+
                     peerConnection.onicecandidate = (event) => {
                         if (event.candidate && isMounted) {
-                            callerCandBatch.push(event.candidate.toJSON());
-                            if (callerCandTimeout) clearTimeout(callerCandTimeout);
-                            callerCandTimeout = setTimeout(() => {
-                                if (isMounted && callerCandBatch.length > 0) {
-                                    updateDoc(roomRef, {
-                                        callerCandidates: arrayUnion(...callerCandBatch)
-                                    }).catch(e => console.warn('Error batching caller candidates:', e));
-                                    callerCandBatch = [];
-                                }
-                            }, 300);
+                            updateDoc(roomRef, {
+                                callerCandidates: arrayUnion(event.candidate.toJSON())
+                            }).catch(err => console.warn('Failed to send caller candidate:', err));
                         }
                     };
 
-                    // Create and set local offer
-                    const offerDescription = await peerConnection.createOffer();
-                    await peerConnection.setLocalDescription(offerDescription);
-
-                    await updateDoc(roomRef, {
-                        offer: {
-                            sdp: offerDescription.sdp,
-                            type: offerDescription.type
-                        }
-                    });
-
-                    // Update main appointment document to 'ready'
-                    try {
-                        const apptRef = doc(db, 'appointments', appointment.id);
-                        await updateDoc(apptRef, {
-                            videoCallStatus: 'ready',
-                            videoRoomId: appointment.id
-                        });
-                    } catch (e) {
-                        console.warn('Could not update appointment status:', e);
-                    }
-
-                    const addedCandidates = new Set<string>();
-
-                    // Listen for callee's answer and ICE candidates
                     unsubscribeRoom = onSnapshot(roomRef, async (snapshot) => {
-                        if (!isMounted) return;
-                        if (!snapshot.exists()) {
-                            // Room document deleted, meaning call ended by peer
-                            setCallStatus('Call ended by other participant.');
-                            setTimeout(() => {
-                                if (isMounted) onLeave();
-                            }, 2500);
-                            return;
-                        }
-
+                        if (!isMounted || !snapshot.exists()) return;
                         const data = snapshot.data();
 
-                        // Set answer SDP
-                        if (data.answer && !peerConnection!.currentRemoteDescription) {
-                            try {
-                                const answerDescription = new RTCSessionDescription(data.answer);
-                                await peerConnection!.setRemoteDescription(answerDescription);
-                            } catch (err) {
-                                console.error('Error setting answer description:', err);
-                            }
+                        if (data.calleeCandidates && Array.isArray(data.calleeCandidates)) {
+                            await processOrQueueCandidates(data.calleeCandidates);
                         }
 
-                        // Add remote ICE candidates (Only if remote description is set!)
-                        if (peerConnection!.currentRemoteDescription && data.calleeCandidates && data.calleeCandidates.length > 0) {
-                            data.calleeCandidates.forEach((cand: any) => {
-                                const key = JSON.stringify(cand);
-                                if (!addedCandidates.has(key)) {
-                                    addedCandidates.add(key);
-                                    peerConnection!.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
-                                }
-                            });
+                        if (data.answer && !peerConnection!.currentRemoteDescription) {
+                            await peerConnection!.setRemoteDescription(new RTCSessionDescription(data.answer));
+                            await drainCandidateQueue();
                         }
                     });
 
                 } else {
-                    // Start as Callee
-                    setCallStatus('Connecting to peer...');
-
-                    const addedCandidates = new Set<string>();
-
-                    // Add callee candidates (debounced to avoid Firestore write rate limiting)
-                    let calleeCandBatch: any[] = [];
-                    let calleeCandTimeout: any = null;
-                    peerConnection.onicecandidate = (event) => {
-                        if (event.candidate && isMounted) {
-                            calleeCandBatch.push(event.candidate.toJSON());
-                            if (calleeCandTimeout) clearTimeout(calleeCandTimeout);
-                            calleeCandTimeout = setTimeout(() => {
-                                if (isMounted && calleeCandBatch.length > 0) {
-                                    updateDoc(roomRef, {
-                                        calleeCandidates: arrayUnion(...calleeCandBatch)
-                                    }).catch(e => console.warn('Error batching callee candidates:', e));
-                                    calleeCandBatch = [];
-                                }
-                            }, 300);
-                        }
-                    };
+                    // PATIENT HANDSHAKE (CALLEE)
+                    setCallStatus('Waiting for Doctor to join and start the call...');
 
                     let remoteDescriptionSet = false;
 
-                    // Listen to room document for offer, answer, and ICE candidates
-                    unsubscribeRoom = onSnapshot(roomRef, async (snapshot) => {
-                        if (!isMounted) return;
-                        if (!snapshot.exists()) {
-                            setCallStatus('Call ended by other participant.');
-                            setTimeout(() => {
-                                if (isMounted) onLeave();
-                            }, 2500);
-                            return;
+                    peerConnection.onicecandidate = (event) => {
+                        if (event.candidate && isMounted) {
+                            updateDoc(roomRef, {
+                                calleeCandidates: arrayUnion(event.candidate.toJSON())
+                            }).catch(err => console.warn('Failed to send callee candidate:', err));
                         }
+                    };
 
+                    unsubscribeRoom = onSnapshot(roomRef, async (snapshot) => {
+                        if (!isMounted || !snapshot.exists()) return;
                         const data = snapshot.data();
 
-                        // 1. Wait for Offer if not set yet, then create Answer
-                        if (data.offer && !remoteDescriptionSet) {
-                            remoteDescriptionSet = true;
-                            try {
-                                const offerDescription = new RTCSessionDescription(data.offer);
-                                await peerConnection!.setRemoteDescription(offerDescription);
-
-                                // Create answer SDP
-                                const answerDescription = await peerConnection!.createAnswer();
-                                await peerConnection!.setLocalDescription(answerDescription);
-
-                                await updateDoc(roomRef, {
-                                    answer: {
-                                        sdp: answerDescription.sdp,
-                                        type: answerDescription.type
-                                    },
-                                    calleeName: userProfile.name || 'User',
-                                    calleeRole: userProfile.role || 'patient'
-                                });
-
-                                // Update main appointment document to 'active'
-                                const apptRef = doc(db, 'appointments', appointment.id);
-                                await updateDoc(apptRef, {
-                                    videoCallStatus: 'active'
-                                });
-                            } catch (err: any) {
-                                console.error('Error setting callee session:', err);
-                            }
+                        if (data.callerCandidates && Array.isArray(data.callerCandidates)) {
+                            await processOrQueueCandidates(data.callerCandidates);
                         }
 
-                        // 2. Add caller candidates (Only if remote description is set!)
-                        if (peerConnection!.currentRemoteDescription && data.callerCandidates && data.callerCandidates.length > 0) {
-                            data.callerCandidates.forEach((cand: any) => {
-                                const key = JSON.stringify(cand);
-                                if (!addedCandidates.has(key)) {
-                                    addedCandidates.add(key);
-                                    peerConnection!.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
-                                }
+                        if (data.offer && !remoteDescriptionSet) {
+                            remoteDescriptionSet = true;
+                            setCallStatus('Doctor found, connecting...');
+
+                            await peerConnection!.setRemoteDescription(new RTCSessionDescription(data.offer));
+                            const answerDescription = await peerConnection!.createAnswer();
+                            await peerConnection!.setLocalDescription(answerDescription);
+
+                            await updateDoc(roomRef, {
+                                answer: { sdp: answerDescription.sdp, type: answerDescription.type },
+                                calleeName: userProfile.name || 'Patient'
                             });
+
+                            updateDoc(doc(db, 'appointments', appointment.id), { videoCallStatus: 'active' }).catch(() => { });
+
+                            await drainCandidateQueue();
                         }
                     });
                 }
 
             } catch (e: any) {
-                console.error('Error starting video call:', e);
+                console.error('Error starting video call session:', e);
                 setCallStatus(`Error: ${e.message || 'Could not access media devices. Ensure camera/mic permissions are granted.'}`);
             }
         }
 
         setupCall();
 
-        // Listen to appointment status changes to detect remote hangup
         const unsubscribeAppt = onSnapshot(doc(db, 'appointments', appointment.id), (snapshot) => {
             if (!isMounted) return;
             if (snapshot.exists()) {
@@ -350,8 +328,7 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
             isMounted = false;
             if (unsubscribeRoom) unsubscribeRoom();
             if (unsubscribeAppt) unsubscribeAppt();
-            
-            // Clean up streams
+
             if (localMediaStream) {
                 localMediaStream.getTracks().forEach(track => track.stop());
             }
@@ -359,23 +336,20 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
                 screenStreamRef.current.getTracks().forEach(track => track.stop());
             }
 
-            // Close connection
             if (peerConnection) {
                 peerConnection.close();
             }
 
-            // Reset appointment status on database
             const apptRef = doc(db, 'appointments', appointment.id);
             updateDoc(apptRef, {
                 videoCallStatus: 'ended'
-            }).catch(() => {});
+            }).catch(() => { });
         };
     }, [appointment.id]);
 
-    // Handle end call button click
+    // Handle end call action
     const handleEndCall = async () => {
         try {
-            // Delete room document to signal peer
             const roomRef = doc(db, 'videoRooms', appointment.id);
             await deleteDoc(roomRef);
         } catch (e) {
@@ -383,7 +357,6 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
         }
 
         try {
-            // Explicitly set appointment status to ended
             const apptRef = doc(db, 'appointments', appointment.id);
             await updateDoc(apptRef, {
                 videoCallStatus: 'ended'
@@ -427,14 +400,12 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
                 screenStreamRef.current = screenStream;
                 const screenTrack = screenStream.getVideoTracks()[0];
 
-                // Replace the video sender track in WebRTC
                 const senders = pc.current.getSenders();
                 const videoSender = senders.find(sender => sender.track?.kind === 'video');
                 if (videoSender) {
                     videoSender.replaceTrack(screenTrack);
                 }
 
-                // Update local preview
                 if (localVideoRef.current) {
                     localVideoRef.current.srcObject = screenStream;
                 }
@@ -454,7 +425,7 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
 
     const stopScreenShare = () => {
         if (!pc.current || !localStream) return;
-        
+
         if (screenStreamRef.current) {
             screenStreamRef.current.getTracks().forEach(t => t.stop());
             screenStreamRef.current = null;
@@ -478,7 +449,7 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
 
     return (
         <div className="fixed inset-0 z-50 bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden">
-            {/* Dark gradient blur header */}
+            {/* Header Toolbar */}
             <div className="absolute top-0 inset-x-0 h-20 bg-gradient-to-b from-slate-950/80 to-transparent z-25 flex items-center justify-between px-6">
                 <div className="flex items-center space-x-3">
                     <div className="h-2.5 w-2.5 rounded-full bg-teal-500 animate-pulse shrink-0" />
@@ -490,7 +461,7 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
                             Room ID: {appointment.id}
                         </p>
                     </div>
-                    <button 
+                    <button
                         onClick={handleCopyId}
                         className="p-1 rounded-md hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
                         title="Copy Room ID"
@@ -536,13 +507,13 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
                     </div>
                 )}
 
-                {/* Remote Video Container (takes full screen stage) */}
+                {/* 3. Ensure Remote Video Elements Render */}
                 <div className="w-full h-full rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 relative shadow-inner">
                     <video
                         ref={remoteVideoRef}
                         autoPlay
                         playsInline
-                        className="w-full h-full object-cover transform scale-x-[-1]"
+                        className="w-full h-full object-cover"
                     />
 
                     {/* Remote Stream Video Off Overlay */}
@@ -564,7 +535,7 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
                 </div>
 
                 {/* Floating Local Picture-In-Picture Video */}
-                <div 
+                <div
                     className="absolute bottom-6 right-6 w-32 sm:w-48 md:w-56 aspect-video bg-slate-950 rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 z-30 transition-all hover:border-teal-500 group"
                 >
                     <video
@@ -594,11 +565,10 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
                     {/* Toggle Mic */}
                     <button
                         onClick={toggleMic}
-                        className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
-                            isMuted 
-                                ? 'bg-rose-500/10 border-rose-500/30 text-rose-500 hover:bg-rose-500/20' 
+                        className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${isMuted
+                                ? 'bg-rose-500/10 border-rose-500/30 text-rose-500 hover:bg-rose-500/20'
                                 : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750 hover:text-white'
-                        }`}
+                            }`}
                         title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
                     >
                         {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
@@ -607,11 +577,10 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
                     {/* Toggle Camera */}
                     <button
                         onClick={toggleCamera}
-                        className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
-                            isVideoOff 
-                                ? 'bg-rose-500/10 border-rose-500/30 text-rose-500 hover:bg-rose-500/20' 
+                        className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${isVideoOff
+                                ? 'bg-rose-500/10 border-rose-500/30 text-rose-500 hover:bg-rose-500/20'
                                 : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750 hover:text-white'
-                        }`}
+                            }`}
                         title={isVideoOff ? 'Turn Camera On' : 'Turn Camera Off'}
                     >
                         {isVideoOff ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
@@ -621,11 +590,10 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
                     <button
                         disabled={!isConnected}
                         onClick={toggleScreenShare}
-                        className={`p-3.5 rounded-2xl border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${
-                            isScreenSharing 
-                                ? 'bg-teal-550 border-teal-550 text-white' 
+                        className={`p-3.5 rounded-2xl border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${isScreenSharing
+                                ? 'bg-teal-550 border-teal-550 text-white'
                                 : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750 hover:text-white'
-                        }`}
+                            }`}
                         title={isScreenSharing ? 'Stop Screen Sharing' : 'Share Screen'}
                     >
                         <Monitor className="h-5 w-5" />

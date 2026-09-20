@@ -29,15 +29,82 @@ export interface Department {
     heroImage: string;
 }
 
-// Duplicate Appointment removed
 export interface UserProfile {
     uid: string;
     name: string;
     email: string;
     phoneNumber: string;
-    role: 'patient' | 'doctor' | 'admin';
+    role: 'patient' | 'doctor' | 'admin' | 'driver' | 'phc_staff';
     doctorId?: string | null; // linked doctor ID from data.ts
+    driverId?: string | null; // linked ambulance driver ID from ambulances collection
+    phcName?: string;
+    phcLocation?: string;
     createdAt: string;
+}
+
+export interface PatientShareLog {
+    referralId?: string | null;
+    patientName: string;
+    patientPhone: string;
+    sharedByDoctor: string;
+    sharedWithDoctorId: string;
+    sharedWithDoctorName: string;
+    sharedWithDoctorSpecialty?: string;
+    notes: string;
+    sharedAt: string;
+    attachmentUrl?: string;
+    attachmentName?: string;
+    attachments?: { name: string; url: string }[];
+}
+
+export interface VillageReferral {
+    id: string;
+    phcName: string;
+    phcLocation: string;
+    phcStaffName: string;
+    patientName: string;
+    patientPhone: string;
+    patientAge: number;
+    patientGender: 'Male' | 'Female' | 'Other';
+    symptoms: string;
+    bloodTestResults?: string; // e.g. "Platelets: 15,000 / mm3"
+    reportUrl?: string;
+    decision: 'Treated_Locally' | 'Referred_Urgently';
+    urgencyReason?: 'Severe Dengue' | 'Low Platelets' | 'ICU Needed' | 'Cardiac Emergency' | 'Trauma' | 'Other';
+    urgencyDetails?: string;
+    targetDoctorId?: string;
+    targetDoctorName?: string;
+    localPrescription?: string;
+    mainDoctorResponse?: {
+        doctorId?: string;
+        doctorName: string;
+        assignedBed?: string; // e.g. "Bed #104 - ICU"
+        instructions: string; // e.g. "Platelets bohot kam hain, turant shahar aao..."
+        respondedAt: string;
+    };
+    status: 'Treated_Locally' | 'Pending_Main_Doctor' | 'Bed_Reserved' | 'Admitted' | 'Completed';
+    createdAt: string;
+    updatedAt: string;
+    sharedHistory?: PatientShareLog[];
+    lastSharedWith?: string;
+}
+
+export interface AmbulanceDriver {
+    id: string;
+    name: string;
+    role: string;
+    phone: string;
+    vehicleType: string;
+    vehicleNo: string;
+    status: 'Available' | 'On Emergency Call';
+    initials: string;
+    bgColor: string;
+    rating: number;
+    tripsCompleted: number;
+    experience: string;
+    driverEmail?: string;
+    driverUid?: string;
+    updatedAt?: string;
 }
 
 export interface PrescriptionMedicine {
@@ -79,6 +146,7 @@ export interface Appointment {
     consultationType?: 'In-Person' | 'Online';
     videoCallStatus?: 'inactive' | 'ready' | 'active' | 'ended';
     videoRoomId?: string;
+    lastSharedWith?: string;
 }
 
-export type Page = 'home' | 'about' | 'departments' | 'doctors' | 'booking' | 'my-appointments' | 'auth' | 'admin' | 'doctor-portal' | 'emergency';
+export type Page = 'home' | 'about' | 'departments' | 'doctors' | 'booking' | 'my-appointments' | 'auth' | 'admin' | 'doctor-portal' | 'driver-portal' | 'emergency' | 'phc-portal';

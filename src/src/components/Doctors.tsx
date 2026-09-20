@@ -1,6 +1,7 @@
 import React from 'react';
 import { Doctor, Page } from '../types';
 import { DEPARTMENTS, DOCTORS } from '../data';
+import { useLanguage } from '../context/LanguageContext';
 import {
     Star,
     Search,
@@ -23,7 +24,7 @@ export default function Doctors({
     setSelectedDepartmentId,
     setSelectedDoctorId
 }: DoctorsProps) {
-
+    const { t } = useLanguage();
     const [searchQuery, setSearchQuery] = React.useState('');
     const [selectedDeptFilter, setSelectedDeptFilter] = React.useState<string>('all');
 
@@ -53,10 +54,10 @@ export default function Doctors({
                 {/* TITLE AND LEAD */}
                 <div className="text-center max-w-3xl mx-auto mb-10">
                     <span className="text-xs font-semibold text-teal-650 uppercase tracking-widest font-mono">
-                        Medical Faculty
+                        {t('doc.sub')}
                     </span>
                     <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold font-sans text-slate-900 mt-2">
-                        Meet Our World-Class Specialists
+                        {t('doc.title')}
                     </h1>
                     <p className="text-slate-505 text-sm sm:text-base mt-2">
                         Vitalis physicians are elite clinical specialists, lecturers, and board-certified practitioners. Narrow your search by clinical branch, review credentials, and coordinate consultation diaries.
@@ -102,7 +103,7 @@ export default function Doctors({
                                                 : 'bg-slate-50 text-slate-650 hover:bg-slate-100 border border-slate-100'
                                             }`}
                                     >
-                                        {dept.name}
+                                        {t(`dept.${dept.id}.title`) || dept.name}
                                     </button>
                                 ))}
                             </div>
@@ -120,14 +121,16 @@ export default function Doctors({
                                 className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 sm:p-6 flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden text-left group"
                                 id={`doctor-card-${doc.id}`}
                             >
-                                {/* Floating department label */}
-                                <div className="absolute top-4 right-4 bg-teal-50 text-teal-700 text-[10px] font-bold font-mono tracking-wider uppercase px-2.5 py-1 rounded-lg">
-                                    {getDeptName(doc.departmentId)}
-                                </div>
-
                                 <div className="space-y-4">
+                                    {/* Department Badge Header */}
+                                    <div className="flex justify-between items-center">
+                                        <span className="bg-teal-50 text-teal-700 text-[10px] font-bold font-mono tracking-wider uppercase px-2.5 py-1 rounded-lg">
+                                            {t(`dept.${doc.departmentId}.title`) || getDeptName(doc.departmentId)}
+                                        </span>
+                                    </div>
+
                                     {/* Avatar / Summary block */}
-                                    <div className="flex space-x-4">
+                                    <div className="flex space-x-4 items-start">
                                         <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0 border border-slate-150/50 shadow-inner">
                                             <img
                                                 src={doc.image}
@@ -137,12 +140,12 @@ export default function Doctors({
                                             />
                                         </div>
 
-                                        <div className="space-y-1">
+                                        <div className="space-y-1 flex-1 min-w-0">
                                             <h3 className="font-extrabold text-slate-900 font-sans text-md sm:text-lg leading-tight tracking-tight">
                                                 {doc.name}
                                             </h3>
                                             <p className="text-xs text-teal-650 font-bold font-sans">
-                                                {doc.specialty}
+                                                {t(`doc.${doc.id}.specialty`) || doc.specialty}
                                             </p>
 
                                             {/* Rating block */}
@@ -156,14 +159,14 @@ export default function Doctors({
 
                                     {/* Biography text */}
                                     <p className="text-slate-600 text-xs sm:text-sm leading-relaxed line-clamp-3">
-                                        {doc.bio}
+                                        {t(`doc.${doc.id}.bio`) || doc.bio}
                                     </p>
 
                                     <div className="space-y-2 pt-3 border-t border-slate-100">
                                         {/* Experience Info */}
                                         <div className="flex items-center text-xs text-slate-505 font-medium">
                                             <Sparkles className="h-4 w-4 text-teal-600 mr-2 shrink-0" />
-                                            <span>{doc.experienceYears} Years Clinical Practice</span>
+                                            <span>{doc.experienceYears} {t('doc.exp')}</span>
                                         </div>
 
                                         {/* Education Academic Degree */}
@@ -178,7 +181,7 @@ export default function Doctors({
                                         <div className="flex items-start text-xs text-slate-505 font-medium">
                                             <Calendar className="h-4 w-4 text-teal-600 mr-2 shrink-0 mt-0.5" />
                                             <span className="leading-tight">
-                                                Days: <strong className="text-slate-800">{doc.availability.days.join(', ')}</strong>
+                                                {t('doc.days')}: <strong className="text-slate-800">{doc.availability.days.join(', ')}</strong>
                                             </span>
                                         </div>
                                     </div>
@@ -188,11 +191,11 @@ export default function Doctors({
                                 <div className="pt-5 mt-4 border-t border-slate-100 flex items-center justify-between">
                                     <div>
                                         <span className="text-[10px] text-slate-400 font-bold uppercase block tracking-wider font-mono">
-                                            Consultation Slots
+                                            {t('doc.slots')}
                                         </span>
                                         <span className="text-xs font-semibold text-emerald-600 flex items-center mt-0.5">
                                             <Clock className="h-3.5 w-3.5 mr-1" />
-                                            <span>Available This Week</span>
+                                            <span>{t('doc.avail')}</span>
                                         </span>
                                     </div>
 
@@ -200,7 +203,7 @@ export default function Doctors({
                                         onClick={() => handleInstantBook(doc.departmentId, doc.id)}
                                         className="inline-flex items-center space-x-1 bg-slate-950 hover:bg-teal-650 active:bg-teal-700 text-white hover:text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer group/btn shadow"
                                     >
-                                        <span>Schedule</span>
+                                        <span>{t('hero.bookBtn')}</span>
                                         <ArrowRight className="h-3 w-3 group-hover/btn:translate-x-0.5 transition-transform" />
                                     </button>
                                 </div>

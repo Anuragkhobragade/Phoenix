@@ -93,6 +93,7 @@
     opacity: 0;
     transform: translateY(6px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -473,6 +474,7 @@
 
 /* Respect users who've asked for reduced motion */
 @media (prefers-reduced-motion: reduce) {
+
   .auth-step,
   .auth-button,
   .success-check circle,

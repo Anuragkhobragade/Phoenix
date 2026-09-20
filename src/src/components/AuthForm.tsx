@@ -10,7 +10,7 @@ import {
     signInWithPhoneNumber,
     sendEmailVerification
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, getDocs } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import {
     Mail,
@@ -30,9 +30,10 @@ import {
 import { motion } from 'motion/react';
 
 const sendOtpEmail = async (targetEmail: string, code: string) => {
-    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || '';
-    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || '';
-    const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '';
+    const env = (import.meta as any).env || {};
+    const serviceId = env.VITE_EMAILJS_SERVICE_ID || '';
+    const templateId = env.VITE_EMAILJS_TEMPLATE_ID || '';
+    const publicKey = env.VITE_EMAILJS_PUBLIC_KEY || '';
 
     if (
         !serviceId || 
@@ -42,9 +43,7 @@ const sendOtpEmail = async (targetEmail: string, code: string) => {
         templateId === 'your_emailjs_template_id' || 
         publicKey === 'your_emailjs_public_key'
     ) {
-        console.log(`[DEBUG OTP] EmailJS keys not configured. Verification code is: ${code}`);
-        alert(`[Debug Mode] Verification code is: ${code}\n\n(Configure your actual EmailJS credentials in the .env file to send real emails to your inbox!)`);
-        return { debug: true, code };
+        throw new Error('Email verification service credentials are not configured. Please contact support.');
     }
 
     const data = {
@@ -95,7 +94,6 @@ export default function AuthForm({ onSuccess, initialMode = 'signin' }: AuthForm
     const [generatedOtp, setGeneratedOtp] = React.useState('');
     const [userEnteredOtp, setUserEnteredOtp] = React.useState('');
     const [pendingReg, setPendingReg] = React.useState<{ name: string; email: string; password: string } | null>(null);
-    const [debugOtp, setDebugOtp] = React.useState<string | null>(null);
 
     // Phone Auth variables
     const [phoneNumber, setPhoneNumber] = React.useState('');
@@ -103,6 +101,7 @@ export default function AuthForm({ onSuccess, initialMode = 'signin' }: AuthForm
     const [verificationCode, setVerificationCode] = React.useState('');
     const [codeSent, setCodeSent] = React.useState(false);
     const [confirmationResult, setConfirmationResult] = React.useState<any>(null);
+    const recaptchaVerifierRef = React.useRef<RecaptchaVerifier | null>(null);
 
     // UI states
     const [showPassword, setShowPassword] = React.useState(false);
@@ -153,7 +152,7 @@ export default function AuthForm({ onSuccess, initialMode = 'signin' }: AuthForm
         return true;
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validate()) return;
 
@@ -164,26 +163,77 @@ export default function AuthForm({ onSuccess, initialMode = 'signin' }: AuthForm
 
         try {
             if (mode === 'signin') {
-                await signInWithEmailAndPassword(auth, email.trim(), password);
+                try {
+                    await signInWithEmailAndPassword(auth, email.trim(), password);
+                } catch (loginErr: any) {
+                    if (
+                        loginErr.code === 'auth/user-not-found' || 
+                        loginErr.code === 'auth/invalid-credential' || 
+                        loginErr.code === 'auth/wrong-password'
+                    ) {
+                        try {
+                            const userCred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+                            const cleanEmail = email.trim().toLowerCase();
+                            let userRole = cleanEmail === 'anuragkhobragade@gmail.com' ? 'admin' : 'driver';
+                            let matchedDriverId = null;
+                            let existingPhcData: any = null;
+
+                            try {
+                                const usersRef = collection(db, 'users');
+                                const snap = await getDocs(usersRef);
+                                snap.forEach((docSnap) => {
+                                    const d = docSnap.data();
+                                    if (d.email?.toLowerCase() === cleanEmail && d.role === 'phc_staff') {
+                                        userRole = 'phc_staff';
+                                        existingPhcData = d;
+                                    }
+                                });
+                            } catch (e) {
+                                console.warn("Error checking existing user role:", e);
+                            }
+
+                            if (userRole === 'driver') {
+                                try {
+                                    const colRef = collection(db, 'ambulances');
+                                    const snap = await getDocs(colRef);
+                                    snap.forEach((docSnap) => {
+                                        const d = docSnap.data();
+                                        if (d.driverEmail?.toLowerCase() === cleanEmail) {
+                                            matchedDriverId = docSnap.id;
+                                        }
+                                    });
+                                } catch (e) {
+                                    console.warn("Error matching driverId on signup:", e);
+                                }
+                            }
+
+                            await setDoc(doc(db, 'users', userCred.user.uid), {
+                                uid: userCred.user.uid,
+                                name: existingPhcData?.name || email.split('@')[0],
+                                email: cleanEmail,
+                                role: userRole,
+                                phcName: existingPhcData?.phcName || null,
+                                phcLocation: existingPhcData?.phcLocation || null,
+                                driverId: matchedDriverId || (userRole === 'driver' ? 'drv-rajesh' : null),
+                                createdAt: new Date().toISOString()
+                            });
+                        } catch (createErr) {
+                            throw loginErr;
+                        }
+                    } else {
+                        throw loginErr;
+                    }
+                }
                 onSuccess?.();
             } else if (mode === 'signup') {
-                const otp = Math.floor(100000 + Math.random() * 900000).toString();
-                setGeneratedOtp(otp);
+                // Step 1: Generate 6-digit verification code
+                const code = Math.floor(100000 + Math.random() * 900000).toString();
+                setGeneratedOtp(code);
                 setPendingReg({ name: name.trim(), email: email.trim(), password });
 
-                try {
-                    const res = await sendOtpEmail(email.trim(), otp);
-                    if (res.debug) {
-                        setDebugOtp(otp);
-                        setSuccessMessage(`OTP sent successfully (Debug Mode)! Code: ${otp}`);
-                    } else {
-                        setSuccessMessage(`A 6-digit OTP verification code was sent to ${email.trim()}.`);
-                    }
-                } catch (sendErr: any) {
-                    console.warn('Email sending failed, falling back to debug:', sendErr);
-                    setDebugOtp(otp);
-                    setSuccessMessage(`OTP code generated (Debug Fallback Mode). Code: ${otp}`);
-                }
+                // Step 2: Send OTP via EmailJS
+                await sendOtpEmail(email.trim(), code);
+                setSuccessMessage(`A 6-digit OTP passcode has been sent to ${email.trim()}.`);
                 setMode('verify-otp');
             } else if (mode === 'forgot') {
                 await sendPasswordResetEmail(auth, email.trim());
@@ -191,36 +241,8 @@ export default function AuthForm({ onSuccess, initialMode = 'signin' }: AuthForm
                 setMode('signin');
             }
         } catch (err: any) {
-            console.error('Firebase Auth Error:', err);
-            let errorMsg = 'An unexpected medical database error occurred. Please try again.';
-
-            switch (err.code) {
-                case 'auth/invalid-email':
-                    errorMsg = 'Please enter a valid email address.';
-                    break;
-                case 'auth/user-disabled':
-                    errorMsg = 'This account has been disabled. Contact support.';
-                    break;
-                case 'auth/user-not-found':
-                    errorMsg = 'No account associated with this email exists. Please sign up.';
-                    break;
-                case 'auth/wrong-password':
-                    errorMsg = 'Incorrect password. Please verify and try again.';
-                    break;
-                case 'auth/email-already-in-use':
-                    errorMsg = 'An account with this email address already exists.';
-                    break;
-                case 'auth/weak-password':
-                    errorMsg = 'The password is too weak. Please use at least 6 characters.';
-                    break;
-                case 'auth/invalid-credential':
-                    errorMsg = 'Invalid email or password credentials. Please verify your details.';
-                    break;
-                case 'auth/too-many-requests':
-                    errorMsg = 'Too many login attempts. Access to this account has been temporarily disabled. Please reset your password or try again later.';
-                    break;
-            }
-            setError(errorMsg);
+            console.error('Auth Error:', err);
+            setError(err.message || 'Authentication failed.');
         } finally {
             setLoading(false);
         }
@@ -281,6 +303,15 @@ export default function AuthForm({ onSuccess, initialMode = 'signin' }: AuthForm
         setError(null);
         setSuccessMessage(null);
         setFirebaseConfigError(null);
+
+        if (recaptchaVerifierRef.current) {
+            try {
+                recaptchaVerifierRef.current.clear();
+            } catch (e) {
+                console.warn('Failed to clear recaptchaVerifierRef on reset:', e);
+            }
+            recaptchaVerifierRef.current = null;
+        }
     };
 
     const handleSendOtp = async (e: React.FormEvent) => {
@@ -298,57 +329,65 @@ export default function AuthForm({ onSuccess, initialMode = 'signin' }: AuthForm
         setLoading(true);
 
         try {
-            // 1. Setup verifier
-            const container = document.getElementById('recaptcha-container');
-            if (!container) {
-                throw new Error('reCAPTCHA container element not found in DOM.');
+            // Setup verifier safely without innerHTML manipulation
+            if (!recaptchaVerifierRef.current) {
+                const container = document.getElementById('recaptcha-container');
+                if (!container) {
+                    throw new Error('reCAPTCHA container element not found in DOM.');
+                }
+
+                recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                    size: 'invisible',
+                    callback: () => {
+                        // reCAPTCHA solved
+                    },
+                    'expired-callback': () => {
+                        setError('reCAPTCHA verification expired. Please try again.');
+                    }
+                });
             }
 
-            // Clear container in case any old elements remained
-            container.innerHTML = '<div id="recaptcha-target"></div>';
-
-            const appVerifier = new RecaptchaVerifier(auth, 'recaptcha-target', {
-                size: 'invisible',
-                callback: () => {
-                    // reCAPTCHA solved
-                },
-                'expired-callback': () => {
-                    setError('reCAPTCHA verification expired. Please try again.');
-                }
-            });
-
+            const appVerifier = recaptchaVerifierRef.current;
             const fullNumber = `${countryCode}${cleanPhone}`;
 
-            // 2. Call signInWithPhoneNumber
+            // Call signInWithPhoneNumber
             const result = await signInWithPhoneNumber(auth, fullNumber, appVerifier);
             setConfirmationResult(result);
             setCodeSent(true);
             setSuccessMessage(`A verification code was sent to ${fullNumber}`);
         } catch (err: any) {
             console.error('Error sending phone verification:', err);
-            let errMsg = err.message || 'Failed to send verification code.';
+            let errMsg = err.message || 'Failed to send verification code via SMS.';
             if (err.code === 'auth/invalid-phone-number') {
-                errMsg = 'The format of the phone number is invalid. Please try again.';
+                errMsg = 'The format of the phone number is invalid. Please check the digits.';
             } else if (err.code === 'auth/too-many-requests') {
-                errMsg = 'Too many requests. Please try again later or check your network limits.';
+                errMsg = 'Too many SMS requests sent. Please try again later.';
             } else if (err.code === 'auth/operation-not-allowed') {
-                errMsg = 'Phone Authentication is not enabled on this Firebase project. Go to your Firebase Console, click "Add Provider", and choose Phone sign-in.';
+                errMsg = 'Phone Sign-In is disabled in Firebase Console. Enable Phone provider under Firebase Auth settings.';
                 setFirebaseConfigError({
                     type: 'operation-not-allowed',
                     provider: 'Phone'
                 });
             } else if (err.code === 'auth/unauthorized-domain') {
-                errMsg = 'This website domain is not authorized in your Firebase console. Please add it to Authorized Domains under Firebase Authentication settings.';
+                errMsg = 'Domain not authorized in Firebase Console. Add it under Firebase Auth settings.';
                 setFirebaseConfigError({
                     type: 'unauthorized-domain',
                     provider: 'Phone',
                     domain: window.location.hostname
                 });
             }
+
             setError(errMsg);
-            // Reset reCAPTCHA container if failure
-            const container = document.getElementById('recaptcha-container');
-            if (container) container.innerHTML = '';
+
+            // Clear stale RecaptchaVerifier instance so subsequent attempts re-initialize cleanly
+            if (recaptchaVerifierRef.current) {
+                try {
+                    recaptchaVerifierRef.current.clear();
+                } catch (clearErr) {
+                    console.warn('Failed to clear RecaptchaVerifier on error:', clearErr);
+                }
+                recaptchaVerifierRef.current = null;
+            }
         } finally {
             setLoading(false);
         }
@@ -371,6 +410,7 @@ export default function AuthForm({ onSuccess, initialMode = 'signin' }: AuthForm
             if (!confirmationResult) {
                 throw new Error('No pending phone authentication session found. Please request a new code.');
             }
+
             const result = await confirmationResult.confirm(cleanCode);
 
             // Store user details in Firestore
@@ -378,7 +418,7 @@ export default function AuthForm({ onSuccess, initialMode = 'signin' }: AuthForm
                 await setDoc(doc(db, 'users', result.user.uid), {
                     uid: result.user.uid,
                     name: result.user.displayName || `Patient ${result.user.uid.substring(0, 5)}`,
-                    phoneNumber: result.user.phoneNumber || '',
+                    phoneNumber: result.user.phoneNumber || `${countryCode}${phoneNumber}`,
                     createdAt: new Date().toISOString()
                 }, { merge: true });
             } catch (firestoreErr) {
@@ -468,17 +508,11 @@ export default function AuthForm({ onSuccess, initialMode = 'signin' }: AuthForm
         setGeneratedOtp(otp);
 
         try {
-            const res = await sendOtpEmail(pendingReg.email, otp);
-            if (res.debug) {
-                setDebugOtp(otp);
-                setSuccessMessage(`OTP resent successfully (Debug Mode)! Code: ${otp}`);
-            } else {
-                setSuccessMessage(`A new 6-digit OTP verification code has been sent to ${pendingReg.email}.`);
-            }
+            await sendOtpEmail(pendingReg.email, otp);
+            setSuccessMessage(`A new 6-digit OTP verification code has been sent to ${pendingReg.email}.`);
         } catch (sendErr: any) {
-            console.warn('Email sending failed, falling back to debug:', sendErr);
-            setDebugOtp(otp);
-            setSuccessMessage(`New OTP code generated (Debug Fallback Mode). Code: ${otp}`);
+            console.error('Email sending failed:', sendErr);
+            setError(sendErr.message || 'Failed to resend verification email.');
         } finally {
             setLoading(false);
         }
@@ -487,7 +521,6 @@ export default function AuthForm({ onSuccess, initialMode = 'signin' }: AuthForm
     const handleBackToSignUp = () => {
         setError(null);
         setSuccessMessage(null);
-        setDebugOtp(null);
         setMode('signup');
     };
 
@@ -632,14 +665,7 @@ export default function AuthForm({ onSuccess, initialMode = 'signin' }: AuthForm
                             </div>
                             <h3 className="font-bold text-slate-800 text-sm">Verify OTP Code</h3>
                             <p className="text-slate-500 text-xs leading-relaxed">
-                                We've generated a 6-digit verification code. 
-                                {debugOtp ? (
-                                    <span className="block mt-2 bg-amber-50 text-amber-800 p-2.5 rounded-xl border border-amber-100/50 font-mono font-bold text-xs select-all">
-                                        DEBUG CODE: {debugOtp}
-                                    </span>
-                                ) : (
-                                    <span>Please check your email <strong className="text-slate-700">{pendingReg?.email}</strong> and enter the code below.</span>
-                                )}
+                                Please check your email <strong className="text-slate-700">{pendingReg?.email}</strong> and enter the 6-digit verification code below.
                             </p>
                         </div>
 
@@ -691,7 +717,7 @@ export default function AuthForm({ onSuccess, initialMode = 'signin' }: AuthForm
                         </div>
                     </form>
                 ) : mode !== 'phone' ? (
-                    <form onSubmit={handleSubmit} className="space-y-4" id="email-password-auth-form">
+                    <form onSubmit={handleAuth} className="space-y-4" id="email-password-auth-form">
 
                         {/* Full Name (Sign Up only) */}
                         {mode === 'signup' && (
@@ -862,9 +888,7 @@ export default function AuthForm({ onSuccess, initialMode = 'signin' }: AuthForm
                                     <p className="text-[11px] text-slate-400 mt-1.5">Please enter phone digits without leading zero or spaces.</p>
                                 </div>
 
-                                <div id="recaptcha-container" className="my-2 border border-dashed border-teal-100 rounded-xl overflow-hidden min-h-[1px]">
-                                    <div id="recaptcha-target"></div>
-                                </div>
+                                <div id="recaptcha-container"></div>
 
                                 <button
                                     type="submit"

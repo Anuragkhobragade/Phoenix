@@ -1,6 +1,7 @@
 import React from 'react';
 import { Page } from '../types';
 import { motion } from 'motion/react';
+import { useLanguage } from '../context/LanguageContext';
 import {
     ShieldCheck,
     Users,
@@ -40,6 +41,7 @@ const TESTIMONIALS = [
 ];
 
 export default function Home({ setCurrentPage }: HomeProps) {
+    const { t } = useLanguage();
     const [activeTestimonial, setActiveTestimonial] = React.useState(0);
 
     const containerVariants = {
@@ -57,6 +59,7 @@ export default function Home({ setCurrentPage }: HomeProps) {
 
     return (
         <div className="bg-slate-50/50 min-h-screen" id="home-page-container">
+
             {/* 1. HERO SECTION */}
             <section className="relative overflow-hidden bg-white py-12 lg:py-20 border-b border-slate-100" id="hero-section">
                 {/* Background glow effects */}
@@ -70,15 +73,15 @@ export default function Home({ setCurrentPage }: HomeProps) {
                         <div className="lg:col-span-7 space-y-6 text-left">
                             <span className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-700 tracking-wider font-mono">
                                 <CheckCircle className="h-3.5 w-3.5 text-teal-650" />
-                                <span>COMMITTED TO HEALTH & WELLNESS</span>
+                                <span>{t('hero.badge')}</span>
                             </span>
 
                             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold font-sans text-slate-900 tracking-tight leading-tight">
-                                Your Health, Our <span className="text-teal-650">Absolute Priority</span> & Commitment
+                                {t('hero.title1')} <span className="text-teal-650">{t('hero.title2')}</span>
                             </h1>
 
                             <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl">
-                                Experience world-class personalized medical treatment combined with clinical research innovation. Our master physicians work collaboratively using advanced diagnostics to ensure you always receive stellar therapeutic outcomes in a supportive, empathetic facility.
+                                {t('hero.subtitle')}
                             </p>
 
                             {/* Action Buttons */}
@@ -89,7 +92,7 @@ export default function Home({ setCurrentPage }: HomeProps) {
                                     id="hero-book-now-btn"
                                 >
                                     <CalendarDays className="h-5 w-5 text-emerald-400 group-hover:scale-105 transition-transform" />
-                                    <span>Book Appointment</span>
+                                    <span>{t('hero.bookBtn')}</span>
                                     <ArrowRight className="h-4 w-4 opacity-70 group-hover:translate-x-1 transition-transform" />
                                 </button>
 
@@ -98,23 +101,23 @@ export default function Home({ setCurrentPage }: HomeProps) {
                                     className="inline-flex items-center justify-center space-x-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-7 py-3.5 rounded-xl text-base transition-all cursor-pointer"
                                     id="hero-departments-btn"
                                 >
-                                    <span>Explore Departments</span>
+                                    <span>{t('nav.departments')}</span>
                                 </button>
                             </div>
 
                             {/* Trust Badges */}
                             <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-100 text-left">
                                 <div>
-                                    <h4 className="text-2xl font-bold font-sans text-slate-900">99.4%</h4>
-                                    <p className="text-xs text-slate-500 font-medium">Patient Satisfaction</p>
+                                    <h4 className="text-2xl font-bold font-sans text-slate-900">{t('hero.stat3.val')}</h4>
+                                    <p className="text-xs text-slate-500 font-medium">{t('hero.stat3.lbl')}</p>
                                 </div>
                                 <div>
-                                    <h4 className="text-2xl font-bold font-sans text-slate-900">15+</h4>
-                                    <p className="text-xs text-slate-500 font-medium">Years Medical Care</p>
+                                    <h4 className="text-2xl font-bold font-sans text-slate-900">{t('hero.stat2.val')}</h4>
+                                    <p className="text-xs text-slate-500 font-medium">{t('hero.stat2.lbl')}</p>
                                 </div>
                                 <div>
-                                    <h4 className="text-2xl font-bold font-sans text-slate-900">100%</h4>
-                                    <p className="text-xs text-slate-500 font-medium font-sans">Certified Specialists</p>
+                                    <h4 className="text-2xl font-bold font-sans text-slate-900">{t('hero.stat1.val')}</h4>
+                                    <p className="text-xs text-slate-500 font-medium font-sans">{t('hero.stat1.lbl')}</p>
                                 </div>
                             </div>
                         </div>
@@ -141,8 +144,8 @@ export default function Home({ setCurrentPage }: HomeProps) {
                                         <ShieldCheck className="h-6 w-6" />
                                     </div>
                                     <div>
-                                        <h5 className="font-bold text-slate-900 text-sm">Recognized Excellence</h5>
-                                        <p className="text-xs text-slate-500">Ranked Top 10 Clinical Center</p>
+                                        <h5 className="font-bold text-slate-900 text-sm">{t('hero.badge1.title')}</h5>
+                                        <p className="text-xs text-slate-500">{t('hero.badge1.sub')}</p>
                                     </div>
                                 </div>
 
@@ -152,7 +155,7 @@ export default function Home({ setCurrentPage }: HomeProps) {
                                         <PhoneCall className="h-5 w-5" />
                                     </div>
                                     <div>
-                                        <h5 className="font-bold text-slate-900 text-xs">24/7 Helpline</h5>
+                                        <h5 className="font-bold text-slate-900 text-xs">{t('hero.badge2.title')}</h5>
                                         <p className="text-[10px] text-teal-700 font-bold font-mono">+91 9552625262</p>
                                     </div>
                                 </div>
@@ -167,13 +170,13 @@ export default function Home({ setCurrentPage }: HomeProps) {
             <section className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" id="why-choose-us">
                 <div className="text-center max-w-3xl mx-auto mb-12">
                     <span className="text-xs font-semibold text-teal-650 uppercase tracking-widest font-mono">
-                        State-of-the-Art Operations
+                        {t('why.sub')}
                     </span>
                     <h2 className="text-3xl font-extrabold font-sans text-slate-900 mt-2">
-                        Providing Exemplary Healthcare Services
+                        {t('why.title')}
                     </h2>
                     <p className="text-slate-500 text-sm sm:text-base mt-2">
-                        Every patient deserves professional consultation and detailed diagnoses. Learn why clinical experts consider Sanjeevani a sanctuary for restorative recovery.
+                        {t('why.desc')}
                     </p>
                 </div>
 
@@ -192,9 +195,9 @@ export default function Home({ setCurrentPage }: HomeProps) {
                         <div className="bg-teal-50 text-teal-700 p-3.5 rounded-xl w-fit group-hover:bg-teal-650 group-hover:text-white transition-all">
                             <Users className="h-6 w-6" />
                         </div>
-                        <h3 className="font-bold text-lg text-slate-900 mt-4 font-sans">Certified Specialists</h3>
+                        <h3 className="font-bold text-lg text-slate-900 mt-4 font-sans">{t('why.f1.title')}</h3>
                         <p className="text-slate-500 text-sm mt-2 leading-relaxed">
-                            Our clinical crew consists of board-certified researchers, surgeons, and therapists trained globally.
+                            {t('why.f1.desc')}
                         </p>
                     </motion.div>
 
@@ -206,9 +209,9 @@ export default function Home({ setCurrentPage }: HomeProps) {
                         <div className="bg-emerald-50 text-emerald-700 p-3.5 rounded-xl w-fit group-hover:bg-emerald-650 group-hover:text-white transition-all">
                             <Award className="h-6 w-6" />
                         </div>
-                        <h3 className="font-bold text-lg text-slate-900 mt-4 font-sans">Advanced Equipment</h3>
+                        <h3 className="font-bold text-lg text-slate-900 mt-4 font-sans">{t('why.f2.title')}</h3>
                         <p className="text-slate-500 text-sm mt-2 leading-relaxed">
-                            From full MRI scanners to digital cardiovascular imaging, we invest consistently in next-generation medical systems.
+                            {t('why.f2.desc')}
                         </p>
                     </motion.div>
 
@@ -220,9 +223,9 @@ export default function Home({ setCurrentPage }: HomeProps) {
                         <div className="bg-amber-50 text-amber-700 p-3.5 rounded-xl w-fit group-hover:bg-amber-650 group-hover:text-white transition-all">
                             <Heart className="h-6 w-6" />
                         </div>
-                        <h3 className="font-bold text-lg text-slate-900 mt-4 font-sans">Nurturing Atmosphere</h3>
+                        <h3 className="font-bold text-lg text-slate-900 mt-4 font-sans">{t('why.f3.title')}</h3>
                         <p className="text-slate-500 text-sm mt-2 leading-relaxed">
-                            We design our rooms, outpatient departments, and children clinics to evoke peace and minimize post-surgery stress.
+                            {t('why.f3.desc')}
                         </p>
                     </motion.div>
 
@@ -234,9 +237,9 @@ export default function Home({ setCurrentPage }: HomeProps) {
                         <div className="bg-sky-50 text-sky-700 p-3.5 rounded-xl w-fit group-hover:bg-sky-650 group-hover:text-white transition-all">
                             <FileCheck className="h-6 w-6" />
                         </div>
-                        <h3 className="font-bold text-lg text-slate-900 mt-4 font-sans">Seamless Diagnostics</h3>
+                        <h3 className="font-bold text-lg text-slate-900 mt-4 font-sans">{t('why.f4.title')}</h3>
                         <p className="text-slate-500 text-sm mt-2 leading-relaxed">
-                            Access digital prescriptions, test logs, and instantly book followups with minimal waiting queues.
+                            {t('why.f4.desc')}
                         </p>
                     </motion.div>
                 </motion.div>
@@ -247,10 +250,10 @@ export default function Home({ setCurrentPage }: HomeProps) {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                     <div className="lg:col-span-8 text-left space-y-4">
                         <h2 className="text-2xl sm:text-3xl font-extrabold font-sans">
-                            Need Prompt Medical Care or Consultation?
+                            {t('banner.title')}
                         </h2>
                         <p className="text-teal-100 text-sm sm:text-base leading-relaxed max-w-2xl">
-                            We provide comprehensive walk-in support and detailed therapeutic sessions. Secure your preferred timing slots by using our automated scheduling assistant.
+                            {t('banner.desc')}
                         </p>
                     </div>
                     <div className="lg:col-span-4 flex justify-start lg:justify-end">
@@ -259,7 +262,7 @@ export default function Home({ setCurrentPage }: HomeProps) {
                             className="w-full sm:w-auto inline-flex items-center justify-center space-x-2.5 bg-white text-teal-900 hover:bg-slate-100 font-bold px-7 py-4 rounded-xl text-md transition-all shadow-md hover:shadow-lg cursor-pointer"
                         >
                             <CalendarDays className="h-5 w-5 text-teal-600" />
-                            <span>Schedule My Visit Now</span>
+                            <span>{t('banner.btn')}</span>
                         </button>
                     </div>
                 </div>
@@ -269,10 +272,10 @@ export default function Home({ setCurrentPage }: HomeProps) {
             <section className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 bg-white border-y border-slate-100" id="testimonials-section">
                 <div className="text-center max-w-3xl mx-auto mb-10">
                     <span className="text-xs font-semibold text-teal-650 tracking-wider uppercase font-mono">
-                        Patient Stories
+                        {t('testim.sub')}
                     </span>
                     <h2 className="text-3xl font-extrabold font-sans text-slate-900 mt-1">
-                        Real Reviews From Our Recovered Patients
+                        {t('testim.title')}
                     </h2>
                 </div>
 
@@ -290,7 +293,7 @@ export default function Home({ setCurrentPage }: HomeProps) {
                                 {TESTIMONIALS[activeTestimonial].author}
                             </h5>
                             <span className="inline-block bg-teal-100/60 text-teal-800 font-mono text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-0.5 rounded-full mt-2">
-                                {TESTIMONIALS[activeTestimonial].tag} Patient
+                                {TESTIMONIALS[activeTestimonial].tag}
                             </span>
                         </div>
 
@@ -318,10 +321,10 @@ export default function Home({ setCurrentPage }: HomeProps) {
                     <div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
                     <h2 className="text-3xl sm:text-4xl font-extrabold font-sans tracking-tight leading-tight max-w-3xl mx-auto">
-                        Experience the Highest Clinical Standards at Sanjeevani
+                        {t('cta.title')}
                     </h2>
                     <p className="text-slate-400 text-sm sm:text-md mt-4 max-w-xl mx-auto">
-                        Book appointment instantly or call our reception desk from Monday to Saturday to schedule diagnostic consultation programs and health checkups.
+                        {t('cta.desc')}
                     </p>
                     <div className="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-4 pt-6">
                         <button
@@ -329,13 +332,13 @@ export default function Home({ setCurrentPage }: HomeProps) {
                             className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-teal-500 hover:bg-teal-400 active:bg-teal-600 text-slate-950 font-bold px-8 py-3.5 rounded-xl text-base transition-all shadow-md shadow-teal-500/5 cursor-pointer"
                         >
                             <CalendarDays className="h-5 w-5 mr-1" />
-                            <span>Book Appointment Now</span>
+                            <span>{t('hero.bookBtn')}</span>
                         </button>
                         <a
                             href="mailto:tksanjeevan@gmail.com"
                             className="w-full sm:w-auto inline-flex items-center justify-center bg-slate-800 hover:bg-slate-700 text-white px-8 py-3.5 rounded-xl text-base font-semibold transition-all border border-slate-700/65"
                         >
-                            Email Reception Desk
+                            {t('cta.emailBtn')}
                         </a>
                     </div>
                 </div>

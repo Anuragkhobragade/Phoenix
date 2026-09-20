@@ -2,6 +2,7 @@ import React from 'react';
 import { Appointment, Page } from '../types';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useLanguage } from '../context/LanguageContext';
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrorHandler';
 import {
     Calendar,
@@ -11,7 +12,6 @@ import {
     Trash2,
     X,
     ShieldAlert,
-    Search,
     CheckCircle,
     FileText,
     Edit,
@@ -36,6 +36,7 @@ export default function MyAppointments({
     onEditAppointment,
     onJoinVideoCall
 }: MyAppointmentsProps) {
+    const { t } = useLanguage();
 
     // State to filter appointments lists on-the-fly
     const [filter, setFilter] = React.useState<'all' | 'Confirmed' | 'Cancelled'>('all');
@@ -144,19 +145,6 @@ export default function MyAppointments({
     return (
         <div className="bg-slate-50/50 min-h-screen py-12 lg:py-16" id="my-appointments-dashboard">
             <div className="max-w-4xl mx-auto px-4 sm:px-6">
-
-                {/* HEADER SECTION */}
-                <div className="text-left space-y-2 mb-10">
-                    <span className="text-xs font-semibold text-teal-650 uppercase tracking-widest font-mono">
-                        Patient Portal
-                    </span>
-                    <h1 className="text-3xl font-extrabold font-sans text-slate-900 tracking-tight">
-                        My Scheduled Appointments
-                    </h1>
-                    <p className="text-slate-505 text-xs sm:text-sm leading-relaxed">
-                        Manage your outpatient bookings, cancel pending schedules, or review reference IDs below. Please present your reference ID upon arriving at the Sanjeevani reception desk.
-                    </p>
-                </div>
 
                 {/* CONTROLS PROFILE BAR */}
                 {appointments.length > 0 && (

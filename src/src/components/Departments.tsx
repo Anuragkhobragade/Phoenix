@@ -1,6 +1,7 @@
 import React from 'react';
 import { Department, Doctor, Page } from '../types';
 import { DEPARTMENTS, DOCTORS } from '../data';
+import { useLanguage } from '../context/LanguageContext';
 import {
     Heart,
     Baby,
@@ -34,7 +35,7 @@ export default function Departments({
     setSelectedDepartmentId,
     setSelectedDoctorId
 }: DepartmentsProps) {
-
+    const { t } = useLanguage();
     const [activeDeptId, setActiveDeptId] = React.useState<string | null>(null);
 
     // Close department active focus and scroll back up
@@ -65,10 +66,10 @@ export default function Departments({
                 {/* HEADER SECTION */}
                 <div className="text-center max-w-3xl mx-auto mb-12">
                     <span className="text-xs font-semibold text-teal-650 uppercase tracking-widest font-mono">
-                        Medical Specializations
+                        {t('dept.sub')}
                     </span>
                     <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold font-sans text-slate-900 mt-2">
-                        Our Elite Specialized Departments
+                        {t('dept.title')}
                     </h1>
                     <p className="text-slate-505 text-sm sm:text-base mt-2">
                         Each specialized clinical department is built on board-certified experts, modern mapping labs, and patient-centered protocols. Click any department to explore detailed diagnostics and meet the doctors.
@@ -108,14 +109,16 @@ export default function Departments({
                                         </div>
 
                                         <div className="absolute bottom-4 left-4">
-                                            <h3 className="text-xl font-bold text-white font-sans">{dept.name}</h3>
+                                            <h3 className="text-xl font-bold text-white font-sans">
+                                                {t(`dept.${dept.id}.title`) || dept.name}
+                                            </h3>
                                         </div>
                                     </div>
 
                                     {/* Card Content body */}
                                     <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between space-y-4">
                                         <p className="text-slate-600 text-sm leading-relaxed line-clamp-3">
-                                            {dept.description}
+                                            {t(`dept.${dept.id}.desc`) || dept.description}
                                         </p>
 
                                         {/* Quick services tags bullets */}

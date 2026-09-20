@@ -2,157 +2,42 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 1. Global Safety Net
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // Global Helpers
+    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isAdmin() {
-      return isSignedIn() && 'email' in request.auth.token && request.auth.token.email.lower() == 'anuragkhobragade@gmail.com';
-    }
-
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function isDoctor() {
-      return isSignedIn() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-             getUserData().role == 'doctor';
-    }
-
-    function getDoctorId() {
-      return getUserData().get('doctorId', '');
-    }
-
-    function incoming() {
-      return request.resource.data;
-    }
-
-    function existing() {
-      return resource.data;
-    }
-
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
-    // Entity-specific Validation Helpers
-    function isValidUser(data) {
-      return data.get('uid', '') is string && data.get('uid', '').size() <= 128 &&
-             data.get('name', '') is string && data.get('name', '').size() <= 128 &&
-             data.get('email', '') is string && data.get('email', '').size() <= 256 &&
-             data.get('phoneNumber', '') is string && data.get('phoneNumber', '').size() <= 32 &&
-             data.get('createdAt', '') is string && data.get('createdAt', '').size() <= 128 &&
-             (data.get('role', 'patient') == 'patient' || data.get('role', 'patient') == 'doctor' || data.get('role', 'patient') == 'admin') &&
-             (data.get('doctorId', null) == null || data.get('doctorId', '') is string);
-    }
-
-    function isValidAppointment(data) {
-      return data.get('id', '') is string && data.get('id', '').size() <= 128 &&
-             data.get('doctorId', '') is string && data.get('doctorId', '').size() <= 128 &&
-             data.get('doctorName', '') is string && data.get('doctorName', '').size() <= 128 &&
-             data.get('departmentId', '') is string && data.get('departmentId', '').size() <= 128 &&
-             data.get('departmentName', '') is string && data.get('departmentName', '').size() <= 128 &&
-             data.get('date', '') is string && data.get('date', '').size() <= 64 &&
-             data.get('timeSlot', '') is string && data.get('timeSlot', '').size() <= 64 &&
-             data.get('patientName', '') is string && data.get('patientName', '').size() <= 128 &&
-             data.get('patientPhone', '') is string && data.get('patientPhone', '').size() <= 64 &&
-             data.get('patientEmail', '') is string && data.get('patientEmail', '').size() <= 256 &&
-             data.get('status', '') is string && (data.get('status', '') == 'Pending' || data.get('status', '') == 'Confirmed' || data.get('status', '') == 'Cancelled') &&
-             data.get('createdAt', '') is string && data.get('createdAt', '').size() <= 128 &&
-             (data.get('notes', null) == null || (data.get('notes', '') is string && data.get('notes', '').size() <= 2048)) &&
-             (data.get('userId', null) == null || (data.get('userId', '') is string && data.get('userId', '').size() <= 128)) &&
-             (data.get('reports', null) == null || (data.get('reports', []) is list && data.get('reports', []).size() <= 10)) &&
-             (data.get('patientAge', null) == null || data.get('patientAge', 0) is int || data.get('patientAge', 0) is float) &&
-             (data.get('patientGender', null) == null || (data.get('patientGender', '') is string && data.get('patientGender', '').size() <= 64)) &&
-             (data.get('medicalHistory', null) == null || (data.get('medicalHistory', '') is string && data.get('medicalHistory', '').size() <= 2048)) &&
-             (data.get('prescription', null) == null || data.get('prescription', null) is map) &&
-             (data.get('consultationType', null) == null || (data.get('consultationType', '') is string && (data.get('consultationType', '') == 'In-Person' || data.get('consultationType', '') == 'Online'))) &&
-             (data.get('videoCallStatus', null) == null || (data.get('videoCallStatus', '') is string && data.get('videoCallStatus', '').size() <= 32)) &&
-             (data.get('videoRoomId', null) == null || (data.get('videoRoomId', '') is string && data.get('videoRoomId', '').size() <= 128));
-    }
-
-    // Collection: Users Profile Map
+    // Collection: Users Profiles (Patients, Doctors, Admins, Drivers, PHC Staff)
     match /users/{userId} {
-      allow get: if isSignedIn() && (userId == request.auth.uid || isAdmin() || isDoctor()) && isValidId(userId);
-      allow list: if isSignedIn() && isAdmin();
-      allow create: if isSignedIn() && userId == request.auth.uid && isValidId(userId) && isValidUser(incoming()) && 
-                    incoming().get('uid', '') == request.auth.uid &&
-                    (incoming().get('role', 'patient') == 'patient' && incoming().get('doctorId', null) == null);
-      allow update: if isSignedIn() && (
-                    (userId == request.auth.uid && isValidId(userId) && isValidUser(incoming()) && 
-                     incoming().get('uid', '') == request.auth.uid &&
-                     incoming().get('createdAt', '') == existing().get('createdAt', '') && 
-                     incoming().get('uid', '') == existing().get('uid', '') &&
-                     incoming().get('role', 'patient') == existing().get('role', 'patient') && 
-                     incoming().get('doctorId', null) == existing().get('doctorId', null)) 
-                    ||
-                    (isAdmin() && isValidId(userId) && isValidUser(incoming()) &&
-                     incoming().get('uid', '') == existing().get('uid', ''))
-                  );
-      allow delete: if false;
+      allow read, write: if true;
     }
 
-    // Collection: Clinical Appointment Bookings
+    // Collection: Appointments Roster & Bookings
     match /appointments/{appointmentId} {
-      allow get: if (existing().get('userId', null) == null || (isSignedIn() && (existing().get('userId', null) == request.auth.uid || isAdmin() || (isDoctor() && existing().get('doctorId', '') == getDoctorId())))) && isValidId(appointmentId);
-      allow list: if isSignedIn() && (resource.data.get('userId', null) == request.auth.uid || (resource.data.get('userId', null) == null && 'email' in request.auth.token && resource.data.get('patientEmail', '').lower() == request.auth.token.email.lower()) || isAdmin() || (isDoctor() && resource.data.get('doctorId', '') == getDoctorId()));
-      allow create: if (incoming().get('userId', null) == null || (isSignedIn() && (incoming().get('userId', null) == request.auth.uid || isAdmin()))) && isValidAppointment(incoming()) && isValidId(appointmentId);
-      allow update: if isSignedIn() && (
-                    (
-                      ((existing().get('userId', null) == request.auth.uid) || 
-                       (existing().get('userId', null) == null && 'email' in request.auth.token && existing().get('patientEmail', '').lower() == request.auth.token.email.lower())) && 
-                      incoming().get('id', '') == existing().get('id', '') && 
-                      incoming().get('userId', null) == existing().get('userId', null) && 
-                      incoming().get('createdAt', '') == existing().get('createdAt', '') && 
-                      (
-                        (
-                          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'videoCallStatus', 'videoRoomId']) &&
-                          (incoming().get('status', '') == 'Confirmed' || incoming().get('status', '') == 'Cancelled')
-                        )
-                        ||
-                        (
-                          isValidAppointment(incoming()) &&
-                          incoming().get('status', '') == 'Pending'
-                        )
-                      )
-                    )
-                    ||
-                    (isAdmin() && (
-                      isValidAppointment(incoming()) || 
-                      (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'videoCallStatus', 'videoRoomId']) && 
-                       (incoming().get('status', '') == 'Confirmed' || incoming().get('status', '') == 'Cancelled'))
-                    ))
-                    ||
-                    (isDoctor() && existing().get('doctorId', '') == getDoctorId() && (
-                      incoming().diff(existing()).affectedKeys().hasOnly(['status', 'prescription', 'videoCallStatus', 'videoRoomId']) &&
-                      (incoming().get('status', '') == 'Confirmed' || incoming().get('status', '') == 'Cancelled' || incoming().get('status', '') == existing().get('status', ''))
-                    ))
-                  );
-      allow delete: if isSignedIn() && (existing().get('userId', null) == request.auth.uid || (existing().get('userId', null) == null && 'email' in request.auth.token && existing().get('patientEmail', '').lower() == request.auth.token.email.lower()) || isAdmin()) && isValidId(appointmentId);
+      allow read, write: if true;
     }
 
-    // Collection: Video Call Rooms
-    match /videoRooms/{appointmentId} {
-      allow read, write: if isSignedIn() && (
-        isAdmin() ||
-        (exists(/databases/$(database)/documents/appointments/$(appointmentId)) && (
-          get(/databases/$(database)/documents/appointments/$(appointmentId)).data.userId == request.auth.uid ||
-          (isDoctor() && get(/databases/$(database)/documents/appointments/$(appointmentId)).data.doctorId == getDoctorId())
-        ))
-      );
+    // Collection: Village PHC Referrals & Emergency Triage
+    match /village_referrals/{referralId} {
+      allow read, write: if true;
     }
 
-    // Collection: Ambulance fleet log
+    // Collection: Ambulance Fleet Log
     match /ambulances/{ambulanceId} {
-      allow read: if true;
-      allow write: if isSignedIn() && isAdmin() && isValidId(ambulanceId);
+      allow read, write: if true;
+    }
+
+   // Collection: Video Call Rooms (Ab subcollections bhi allow ho jayengi)
+    match /videoRooms/{roomId} {
+      allow read, write: if true;
+      match /{allSubcollections=**} {
+        allow read, write: if true;
+      }
+    }
+
+    // Collection: Live Ambulance Bookings & GPS Coordinates
+    match /ambulance_bookings/{bookingId} {
+      allow read, write: if true;
     }
   }
 }
