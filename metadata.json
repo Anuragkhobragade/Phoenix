@@ -1,0 +1,8 @@
+{
+    "name": "Medical Center Portal",
+    "description": "A modern, clean hospital website with interactive department exploration, doctor directories, and a step-by-step appointment booking system.",
+    "requestFramePermissions": [],
+    "majorCapabilities": [
+        "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+    ]
+}

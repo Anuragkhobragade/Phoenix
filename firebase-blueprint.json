@@ -1,0 +1,132 @@
+{
+    "entities": {
+        "User": {
+            "title": "User",
+            "description": "Individual patient account profile.",
+            "type": "object",
+            "properties": {
+                "uid": {
+                    "type": "string",
+                    "description": "Firebase Auth unique identifier."
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Full name of the registered patient."
+                },
+                "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Email address of the patient."
+                },
+                "phoneNumber": {
+                    "type": "string",
+                    "description": "Mobile raw number parsed from OTP session."
+                },
+                "createdAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO timestamp representing profile registration date."
+                }
+            },
+            "required": [
+                "uid",
+                "name",
+                "createdAt"
+            ]
+        },
+        "Appointment": {
+            "title": "Appointment",
+            "description": "Medical and clinic visit booking.",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "Unique medical appointment ID e.g. APT-XXXXXX."
+                },
+                "doctorId": {
+                    "type": "string",
+                    "description": "Identifier of the assigned physical doctor."
+                },
+                "doctorName": {
+                    "type": "string",
+                    "description": "Plain clinical title of the target doctor."
+                },
+                "departmentId": {
+                    "type": "string",
+                    "description": "Medical unit tag (e.g., cardiology)."
+                },
+                "departmentName": {
+                    "type": "string",
+                    "description": "Readable name of the medical department."
+                },
+                "date": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "Clinic visit date formatted as YYYY-MM-DD."
+                },
+                "timeSlot": {
+                    "type": "string",
+                    "description": "Check-in time slot (e.g., 10:30 AM)."
+                },
+                "patientName": {
+                    "type": "string",
+                    "description": "Name of the presenting patient."
+                },
+                "patientPhone": {
+                    "type": "string",
+                    "description": "Contact phone digits of the patient."
+                },
+                "patientEmail": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Contact email address of the patient."
+                },
+                "notes": {
+                    "type": "string",
+                    "description": "Optional patient description of visits symptoms or expectations."
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "Confirmed",
+                        "Cancelled"
+                    ],
+                    "description": "State transition lifecycle flag."
+                },
+                "createdAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO timestamp when the scheduler logged this booking."
+                },
+                "userId": {
+                    "type": "string",
+                    "description": "Authenticated UID of the patient account who booked this appointment."
+                }
+            },
+            "required": [
+                "id",
+                "doctorId",
+                "doctorName",
+                "departmentId",
+                "departmentName",
+                "date",
+                "timeSlot",
+                "patientName",
+                "patientPhone",
+                "patientEmail",
+                "status",
+                "createdAt"
+            ]
+        }
+    },
+    "firestore": {
+        "users/{userId}": {
+            "schema": "User",
+            "description": "Read-write secure user profile maps."
+        },
+        "appointments/{appointmentId}": {
+            "schema": "Appointment",
+            "description": "Secured clinical appointments booked, altered, or deleted."
+        }
+    }
+}

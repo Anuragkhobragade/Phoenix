@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sanjeevani Medical Center - Premier Hospital & Appointment Clinic</title>
+    <script>
+        (function () {
+            // Suppress all benign cross-origin script error reporting to prevent playground telemetry noise
+            window.onerror = function (message, source, lineno, colno, error) {
+                var msg = String(message || '').toLowerCase();
+                if (!message || msg.indexOf('script error') !== -1 || message === 'Script error.' || (!source && !lineno)) {
+                    console.warn("Intercepted and suppressed cross-origin noise:", message);
+                    return true; // Prevent default firing
+                }
+                return false;
+            };
+
+            window.addEventListener('error', function (e) {
+                var msg = String(e.message || '').toLowerCase();
+                if (!e.message || msg.indexOf('script error') !== -1 || e.message === 'Script error.') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            }, true);
+
+            window.addEventListener('unhandledrejection', function (e) {
+                if (e.reason) {
+                    var reasonStr = String(e.reason.message || e.reason || '').toLowerCase();
+                    if (reasonStr.indexOf('script error') !== -1) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                }
+            }, true);
+
+            try {
+                var originalFetch = window.fetch || (typeof globalThis !== 'undefined' ? globalThis.fetch : null);
+                if (originalFetch) {
+                    var fetchContainer = {
+                        fetch: originalFetch
+                    };
+
+                    function patchObject(obj, name) {
+                        if (!obj) return;
+                        try {
+                            var desc = Object.getOwnPropertyDescriptor(obj, name);
+                            if (desc && !desc.configurable) {
+                                if (desc.writable || desc.set) {
+                                    return; // Already assignment-friendly
+                                }
+                            }
+
+                            try {
+                                delete obj[name];
+                            } catch (de) { }
+
+                            Object.defineProperty(obj, name, {
+                                get: function () {
+                                    return fetchContainer.fetch;
+                                },
+                                set: function (val) {
+                                    fetchContainer.fetch = val;
+                                },
+                                configurable: true,
+                                enumerable: true
+                            });
+                        } catch (e) {
+                            console.warn("Could not patch " + name + " on object", obj, e);
+                        }
+                    }
+
+                    // Patch all logical global context objects to ensure assignment doesn't crash on read-only getter
+                    patchObject(window, 'fetch');
+                    if (typeof globalThis !== 'undefined') {
+                        patchObject(globalThis, 'fetch');
+                    }
+                }
+            } catch (err) {
+                console.warn("Enhanced window.fetch patch encountered error:", err);
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+</head>
+
+<body>
+    <div id="root"></div>
+    <script type="module" src="/src/src/main.tsx"></script>
+</body>
+
+</html>

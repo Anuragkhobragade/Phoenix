@@ -1,0 +1,48 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+    --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-display: "Outfit", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+    /* Precision Medical Color Palette */
+    --color-teal-50: #f0fdfa;
+    --color-teal-100: #ccfbf1;
+    --color-teal-500: #14b8a6;
+    --color-teal-600: #0d9488;
+    --color-teal-650: #0f766e;
+    --color-teal-700: #0f766e;
+    --color-teal-750: #115e59;
+    --color-teal-800: #115e59;
+    --color-teal-850: #134e4a;
+
+    --color-emerald-50: #ecfdf5;
+    --color-emerald-100: #d1fae5;
+    --color-emerald-400: #34d399;
+    --color-emerald-500: #10b981;
+    --color-emerald-600: #059669;
+    --color-emerald-650: #047857;
+
+    --color-slate-50: #f8fafc;
+    --color-slate-100: #f1f5f9;
+    --color-slate-150: #e2e8f0;
+    --color-slate-200: #e2e8f0;
+    --color-slate-205: #cbd5e1;
+    --color-slate-350: #94a3b8;
+    --color-slate-400: #94a3b8;
+    --color-slate-450: #64748b;
+    --color-slate-500: #64748b;
+    --color-slate-505: #475569;
+    --color-slate-600: #475569;
+    --color-slate-650: #334155;
+    --color-slate-900: #0f172a;
+}
+
+/* Custom interactive animation for smooth hover scaling */
+@layer utilities {
+    .hover-card-trigger:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px -10px rgba(15, 23, 42, 0.08);
+    }
+}

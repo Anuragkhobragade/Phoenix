@@ -19,6 +19,8 @@ const servers: RTCConfiguration = {
                 'stun:stun2.l.google.com:19302',
                 'stun:stun3.l.google.com:19302',
                 'stun:stun4.l.google.com:19302',
+                'stun:stun.services.mozilla.com',
+                'stun:global.stun.twilio.com:3478'
             ],
         },
         {
@@ -49,6 +51,7 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
     const [isScreenSharing, setIsScreenSharing] = useState(false);
     const [copied, setCopied] = useState(false);
     const [isRemoteVideoActive, setIsRemoteVideoActive] = useState(true);
+    const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
     const isDoctor = userProfile.role === 'doctor';
 
@@ -67,11 +70,16 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
         }
     }, [localStream]);
 
-    // 1. Auto-bind stream using useEffect
+    // 1. Auto-bind stream using useEffect with autoplay failure recovery
     useEffect(() => {
         if (remoteVideoRef.current && remoteStream) {
             remoteVideoRef.current.srcObject = remoteStream;
-            remoteVideoRef.current.play().catch((e) => console.warn("Autoplay block:", e));
+            remoteVideoRef.current.play()
+                .then(() => setAutoplayBlocked(false))
+                .catch((e) => {
+                    console.warn("Remote stream autoplay block caught:", e);
+                    setAutoplayBlocked(true);
+                });
         }
     }, [remoteStream]);
 
@@ -145,7 +153,12 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
 
                     if (remoteVideoRef.current) {
                         remoteVideoRef.current.srcObject = incomingStream;
-                        remoteVideoRef.current.play().catch(e => console.warn('Remote video playback warning:', e));
+                        remoteVideoRef.current.play()
+                            .then(() => setAutoplayBlocked(false))
+                            .catch(e => {
+                                console.warn('Remote video playback autoplay blocked:', e);
+                                setAutoplayBlocked(true);
+                            });
                     }
 
                     if (event.track.kind === 'video') {
@@ -155,7 +168,7 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
                             if (isMounted) setIsRemoteVideoActive(true);
                         };
                         event.track.onmute = () => {
-                            if (isMounted && !event.track.enabled) {
+                            if (isMounted && event.track.enabled === false) {
                                 setIsRemoteVideoActive(false);
                             }
                         };
@@ -508,7 +521,7 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
                 )}
 
                 {/* 3. Ensure Remote Video Elements Render */}
-                <div className="w-full h-full rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 relative shadow-inner">
+                <div className="w-full h-full rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 relative shadow-inner flex items-center justify-center">
                     <video
                         ref={remoteVideoRef}
                         autoPlay
@@ -516,8 +529,35 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
                         className="w-full h-full object-cover"
                     />
 
+                    {/* Autoplay Blocked Tap-to-Play Overlay */}
+                    {isConnected && autoplayBlocked && (
+                        <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-xs flex flex-col items-center justify-center space-y-3 z-25 p-4 text-center">
+                            <div className="p-4 bg-teal-600 rounded-full text-white animate-pulse shadow-lg">
+                                <Video className="h-8 w-8" />
+                            </div>
+                            <h4 className="text-base font-extrabold text-white">
+                                Click to Start Live Video & Audio / वीडियो चालू करें
+                            </h4>
+                            <p className="text-xs text-slate-300 max-w-xs leading-relaxed">
+                                Browser permission policy requires a tap to enable live video playback.
+                            </p>
+                            <button
+                                onClick={() => {
+                                    if (remoteVideoRef.current) {
+                                        remoteVideoRef.current.play()
+                                            .then(() => setAutoplayBlocked(false))
+                                            .catch(err => console.error("Manual play error:", err));
+                                    }
+                                }}
+                                className="bg-teal-650 hover:bg-teal-750 text-white font-bold py-2.5 px-6 rounded-xl text-xs shadow-md transition-all cursor-pointer"
+                            >
+                                Tap to Play Video Stream 🎥
+                            </button>
+                        </div>
+                    )}
+
                     {/* Remote Stream Video Off Overlay */}
-                    {isConnected && !isRemoteVideoActive && (
+                    {isConnected && !autoplayBlocked && !isRemoteVideoActive && (
                         <div className="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center space-y-3 z-15">
                             <div className="h-16 w-16 bg-slate-800 rounded-full flex items-center justify-center border border-slate-700">
                                 <VideoOff className="h-8 w-8 text-slate-500" />
@@ -529,7 +569,8 @@ export default function VideoCallRoom({ appointment, userProfile, onLeave }: Vid
                     )}
 
                     {/* Remote stream description badge */}
-                    <div className="absolute bottom-4 left-4 bg-slate-950/70 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-xs font-semibold flex items-center gap-2">
+                    <div className="absolute bottom-4 left-4 bg-slate-950/70 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-xs font-semibold flex items-center gap-2 z-20">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                         <span>{isDoctor ? appointment.patientName : appointment.doctorName}</span>
                     </div>
                 </div>

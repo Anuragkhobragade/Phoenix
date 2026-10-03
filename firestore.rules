@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Collection: Users Profiles (Patients, Doctors, Admins, Drivers, PHC Staff)
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    // Collection: Appointments Roster & Bookings
+    match /appointments/{appointmentId} {
+      allow read, write: if true;
+    }
+
+    // Collection: Village PHC Referrals & Emergency Triage
+    match /village_referrals/{referralId} {
+      allow read, write: if true;
+    }
+
+    // Collection: Ambulance Fleet Log
+    match /ambulances/{ambulanceId} {
+      allow read, write: if true;
+    }
+
+   // Collection: Video Call Rooms (Ab subcollections bhi allow ho jayengi)
+    match /videoRooms/{roomId} {
+      allow read, write: if true;
+      match /{allSubcollections=**} {
+        allow read, write: if true;
+      }
+    }
+
+    // Collection: Live Ambulance Bookings & GPS Coordinates
+    match /ambulance_bookings/{bookingId} {
+      allow read, write: if true;
+    }
+  }
+}
